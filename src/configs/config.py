@@ -21,7 +21,7 @@ LR = 1e-4
 RANDOM_SEED = 21
 
 NUM_EPOCHS = 5
-VAL_EVERY = 5
+VAL_EVERY = 1
 
 
 # 시각화를 위한 전역 변수

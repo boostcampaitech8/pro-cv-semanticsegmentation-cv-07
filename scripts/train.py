@@ -1,8 +1,10 @@
 from src.data.train_data import XRayDataset
-from src.configs.config import BATCH_SIZE, CLASSES, LR, SAVED_DIR, RANDOM_SEED
+from src.configs.config import BATCH_SIZE, CLASSES, LR, SAVED_DIR, RANDOM_SEED, NUM_EPOCHS, VAL_EVERY
 from src.utils.set_seed import set_seed
 from src.engine.trainer import train
 import os
+import wandb
+from dotenv import load_dotenv
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -14,6 +16,28 @@ def main():
     
     if not os.path.exists(SAVED_DIR):                                                           
         os.makedirs(SAVED_DIR)
+    
+    save_file_name = "fcn_resnet50_best_model.pt"
+    
+    load_dotenv()
+    
+    wandb.login(key=os.getenv("WANDB_API_KEY"))
+
+    wandb.init(
+        project=os.getenv("WANDB_PROJECT"),
+        entity=os.getenv("WANDB_ENTITY"),
+        name=save_file_name,
+        config={
+            "batch_size": BATCH_SIZE,
+            "lr": LR,
+            "random_seed": RANDOM_SEED,
+            "num_epochs": NUM_EPOCHS,
+            "val_every": VAL_EVERY,
+        },
+        settings=wandb.Settings(_disable_stats=False),
+    )
+
+    wandb.config.update({"monitor_memory": True})
     
     train_dataset = XRayDataset(is_train=True)
     valid_dataset = XRayDataset(is_train=False)
@@ -41,7 +65,7 @@ def main():
     criterion = nn.BCEWithLogitsLoss() 
     optimizer = optim.Adam(params=model.parameters(), lr=LR, weight_decay=1e-6)
 
-    train(model, train_loader, valid_loader, criterion, optimizer, save_file_name="fcn_resnet50_best_model.pt")
+    train(model, train_loader, valid_loader, criterion, optimizer, save_file_name=save_file_name)
 
 
 if __name__ == '__main__':

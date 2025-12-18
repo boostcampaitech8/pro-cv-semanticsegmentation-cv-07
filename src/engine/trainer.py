@@ -1,6 +1,7 @@
 from src.configs.config import CLASSES, NUM_EPOCHS, VAL_EVERY, SAVED_DIR
 from src.metrics.dice import dice_coef
 import os
+import wandb
 import torch
 import datetime
 from tqdm.auto import tqdm
@@ -52,7 +53,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     
     avg_dice = torch.mean(dices_per_class).item()
     
-    return avg_dice
+    return total_loss / len(data_loader), avg_dice
 
 
 def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
@@ -62,6 +63,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
     best_dice = 0.
     
     for epoch in range(NUM_EPOCHS):
+        train_loss = 0
         model.train()
 
         for step, (images, masks) in enumerate(data_loader):            
@@ -77,6 +79,8 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
             loss.backward()
             optimizer.step()
             
+            train_loss += loss.item()
+            
             # step 주기에 따라 loss를 출력합니다.
             if (step + 1) % 25 == 0:
                 print(
@@ -86,9 +90,8 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
                     f'Loss: {round(loss.item(),4)}'
                 )
              
-        # validation 주기에 따라 loss를 출력하고 best model을 저장합니다.
         if (epoch + 1) % VAL_EVERY == 0:
-            dice = validation(epoch + 1, model, val_loader, criterion)
+            val_loss, dice = validation(epoch + 1, model, val_loader, criterion)
             
             if best_dice < dice:
                 output_path = os.path.join(SAVED_DIR, save_file_name)
@@ -96,3 +99,15 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
                 print(f"Save model in {output_path}")
                 best_dice = dice
                 torch.save(model, output_path)
+            
+            wandb.log({
+                "train/loss": train_loss / len(data_loader),
+                "val/loss": val_loss,
+                "val/DICE": dice,
+                "epoch": epoch + 1,
+            })
+        else:
+            wandb.log({
+                "train/loss": train_loss / len(data_loader),
+                "epoch": epoch + 1,
+            })
