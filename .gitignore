@@ -2,3 +2,6 @@ src/datasets/
 outputs/
 
 __pycache__/
+wandb/
+
+.env
