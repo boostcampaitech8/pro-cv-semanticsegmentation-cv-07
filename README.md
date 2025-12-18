@@ -2,7 +2,7 @@
 
 ## 주의사항
 - `src/configs/config.py` 파일에서 데이터 경로 확인
-- 데이터는 `src/dataset` 내부에 넣는 것을 추천
+- 데이터는 `src/datasets` 내부에 넣는 것을 추천
 - `wandb` 설정을 위해 `.env` 파일 작성:
 
 ```text
@@ -20,3 +20,4 @@ python -m scripts.train
 ```bash
 python -m scripts.test
 ```
+
