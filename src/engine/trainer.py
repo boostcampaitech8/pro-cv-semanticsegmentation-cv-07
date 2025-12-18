@@ -32,7 +32,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
                 outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
             
             loss = criterion(outputs, masks)
-            total_loss += loss
+            total_loss += loss.item()
             cnt += 1
             
             outputs = torch.sigmoid(outputs)
