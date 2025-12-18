@@ -8,7 +8,14 @@ from .transforms import  get_test_transform
 
 
 class XRayInferenceDataset(Dataset):
-    def __init__(self, pngs):
+    def __init__(self):
+        pngs = {
+            os.path.relpath(os.path.join(root, fname), start=TEST_IMAGE_ROOT)
+            for root, _dirs, files in os.walk(TEST_IMAGE_ROOT)
+            for fname in files
+            if os.path.splitext(fname)[1].lower() == ".png"
+        }
+        
         _filenames = pngs
         _filenames = np.array(sorted(_filenames))
         
