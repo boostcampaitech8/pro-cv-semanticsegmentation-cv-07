@@ -11,7 +11,7 @@ import torch.nn.functional as F
 def validation(epoch, model, data_loader, criterion, thr=0.5):
     print(f'Start validation #{epoch:2d}')
     model.eval()
-    model = model.cuda()
+    # model = model.cuda()
 
     dices = []
     with torch.no_grad():
@@ -69,7 +69,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
         for step, (images, masks) in enumerate(data_loader):            
             # gpu 연산을 위해 device 할당합니다.
             images, masks = images.cuda(), masks.cuda()
-            model = model.cuda()
+            # model = model.cuda()
             
             outputs = model(images)['out']
             
