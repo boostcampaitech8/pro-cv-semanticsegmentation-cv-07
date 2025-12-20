@@ -89,17 +89,29 @@ def main(args):
             random_state=args.seed
         )
         val_ids.extend(sampled["image_id"].tolist())
+    
+    # --- derive train ids ---
+    all_ids = set(df["image_id"].tolist())
+    val_ids = set(val_ids)
+    train_ids = sorted(all_ids - val_ids)
+
 
     # --- save ---
     os.makedirs(args.out_dir, exist_ok=True)
-    out_path = os.path.join(args.out_dir, "val.txt")
+    val_path = os.path.join(args.out_dir, "val.txt")
+    train_path = os.path.join(args.out_dir, "train.txt")
 
-    with open(out_path, "w") as f:
+    with open(val_path, "w") as f:
         for image_id in sorted(val_ids):
             f.write(f"{image_id}\n")
 
-    print(f"[OK] S1 validation split saved to: {out_path}")
-    print(f"Total val images: {len(val_ids)}")
+    with open(train_path, "w") as f:
+        for image_id in train_ids:
+            f.write(f"{image_id}\n")
+
+
+    print(f"[OK] S1 split saved to: {args.out_dir}")
+    print(f"Train images: {len(train_ids)} | Val images: {len(val_ids)}")
 
 
 if __name__ == "__main__":

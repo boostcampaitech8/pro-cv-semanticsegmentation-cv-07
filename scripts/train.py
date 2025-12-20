@@ -18,6 +18,7 @@ def main():
         os.makedirs(SAVED_DIR)
     
     save_file_name = 'deeplabv3_resnet50_best_model.pt'
+    run_name = "S1_bdeeplabv3_resnet50_best_model.pt"
     
     load_dotenv()
     
@@ -26,7 +27,7 @@ def main():
     wandb.init(
         project=os.getenv("WANDB_PROJECT"),
         entity=os.getenv("WANDB_ENTITY"),
-        name=save_file_name,
+        name=run_name,
         config={
             "batch_size": BATCH_SIZE,
             "lr": LR,
@@ -39,8 +40,10 @@ def main():
 
     wandb.config.update({"monitor_memory": True})
     
-    train_dataset = XRayDataset(is_train=True)
-    valid_dataset = XRayDataset(is_train=False)
+    train_dataset = XRayDataset(is_train=True,
+                                split_file="../wooqi00_test/splits_outputs/s1/train.txt")
+    valid_dataset = XRayDataset(is_train=False,
+                                split_file="../wooqi00_test/splits_outputs/s1/val.txt")
 
     train_loader = DataLoader(
         dataset=train_dataset, 
