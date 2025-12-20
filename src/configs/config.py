@@ -20,8 +20,8 @@ BATCH_SIZE = 8
 LR = 1e-4
 RANDOM_SEED = 21
 
-NUM_EPOCHS = 5
-VAL_EVERY = 1
+NUM_EPOCHS = 90
+VAL_EVERY = 3
 
 
 # 시각화를 위한 전역 변수

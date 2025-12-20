@@ -17,7 +17,7 @@ def main():
     if not os.path.exists(SAVED_DIR):                                                           
         os.makedirs(SAVED_DIR)
     
-    save_file_name = "fcn_resnet50_best_model.pt"
+    save_file_name = 'deeplabv3_resnet50_best_model.pt'
     
     load_dotenv()
     
@@ -59,8 +59,10 @@ def main():
         drop_last=False
     )
     
-    model = models.segmentation.fcn_resnet50(pretrained=True)
-    model.classifier[4] = nn.Conv2d(512, len(CLASSES), kernel_size=1)
+    model = models.segmentation.deeplabv3_resnet50(pretrained=True)
+    in_channels = model.classifier[-1].in_channels
+    model.classifier[-1] = nn.Conv2d(in_channels, len(CLASSES), kernel_size=1)
+    
     
     criterion = nn.BCEWithLogitsLoss() 
     optimizer = optim.Adam(params=model.parameters(), lr=LR, weight_decay=1e-6)
