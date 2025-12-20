@@ -40,7 +40,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
             masks = masks.detach()
             
             dice = dice_coef(outputs, masks)
-            dices.append(dice.cpu())
+            dices.append(dice.detach().cpu())
                 
     dices = torch.cat(dices, 0)
     dices_per_class = torch.mean(dices, 0)
@@ -58,6 +58,8 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
 
 def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
     print(f'Start training..')
+    
+    model = model.cuda()
     
     n_class = len(CLASSES)
     best_dice = 0.
