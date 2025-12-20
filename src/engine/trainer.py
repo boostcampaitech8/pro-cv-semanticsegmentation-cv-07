@@ -52,7 +52,8 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     print(dice_str)
     
     avg_dice = torch.mean(dices_per_class).item()
-    
+    torch.cuda.empty_cache()
+
     return total_loss / len(data_loader), avg_dice
 
 
@@ -60,7 +61,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
     print(f'Start training..')
     
     model = model.cuda()
-    
+
     n_class = len(CLASSES)
     best_dice = 0.
     
