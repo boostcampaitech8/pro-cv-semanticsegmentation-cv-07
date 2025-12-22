@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from torchvision import models
+import segmentation_models_pytorch as smp
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     if not os.path.exists(SAVED_DIR):                                                           
         os.makedirs(SAVED_DIR)
     
-    save_file_name = 'deeplabv3_resnet50_best_model.pt'
+    save_file_name = 'unet_baseline_best_model.pt'
     
     load_dotenv()
     
@@ -53,15 +53,18 @@ def main():
     # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
     valid_loader = DataLoader(
         dataset=valid_dataset, 
-        batch_size=8,
+        batch_size=BATCH_SIZE,
         shuffle=False,
         num_workers=0,
         drop_last=False
     )
     
-    model = models.segmentation.deeplabv3_resnet50(pretrained=True)
-    in_channels = model.classifier[-1].in_channels
-    model.classifier[-1] = nn.Conv2d(in_channels, len(CLASSES), kernel_size=1)
+    model = smp.Unet(
+        encoder_name="efficientnet-b0",
+        encoder_weights="imagenet",
+        in_channels=3,
+        classes=29,
+    )
     
     criterion = nn.BCEWithLogitsLoss() 
     optimizer = optim.Adam(params=model.parameters(), lr=LR, weight_decay=1e-6)

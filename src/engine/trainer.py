@@ -22,7 +22,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
         for step, (images, masks) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images, masks = images.cuda(), masks.cuda()         
             
-            outputs = model(images)['out']
+            outputs = model(images)
             
             output_h, output_w = outputs.size(-2), outputs.size(-1)
             mask_h, mask_w = masks.size(-2), masks.size(-1)
@@ -36,11 +36,11 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
             cnt += 1
             
             outputs = torch.sigmoid(outputs)
-            outputs = (outputs > thr).detach()
-            masks = masks.detach()
+            outputs = (outputs > thr).detach().cpu()
+            masks = masks.detach().cpu()
             
             dice = dice_coef(outputs, masks)
-            dices.append(dice.cpu())
+            dices.append(dice)
                 
     dices = torch.cat(dices, 0)
     dices_per_class = torch.mean(dices, 0)
@@ -72,7 +72,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name, 
             # gpu 연산을 위해 device 할당합니다.
             images, masks = images.cuda(), masks.cuda()
             
-            outputs = model(images)['out']
+            outputs = model(images)
             
             # loss를 계산합니다.
             loss = criterion(outputs, masks)
