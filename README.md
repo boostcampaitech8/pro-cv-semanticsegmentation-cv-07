@@ -13,11 +13,13 @@ WANDB_PROJECT=Hand-Bone-Segmentation
 
 ## 학습
 ```bash
-python -m scripts.train
+python -m scripts.train --model unet --use_wandb
 ```
 
 ## 추론
+- 아직 parser 추가 X, 하드 코딩해야 됨
 ```bash
 python -m scripts.test
 ```
+
 
