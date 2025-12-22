@@ -56,11 +56,13 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     return total_loss / len(data_loader), avg_dice
 
 
-def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
+def train(model, data_loader, val_loader, criterion, optimizer, save_file_name, num_patience = 5):
     print(f'Start training..')
     
+    model = model.cuda()
     n_class = len(CLASSES)
     best_dice = 0.
+    patience = 0
     
     for epoch in range(NUM_EPOCHS):
         train_loss = 0
@@ -69,7 +71,6 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
         for step, (images, masks) in enumerate(data_loader):            
             # gpu 연산을 위해 device 할당합니다.
             images, masks = images.cuda(), masks.cuda()
-            model = model.cuda()
             
             outputs = model(images)['out']
             
@@ -99,6 +100,9 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
                 print(f"Save model in {output_path}")
                 best_dice = dice
                 torch.save(model, output_path)
+                patience = 0
+            else:
+                patience += 1
             
             wandb.log({
                 "train/loss": train_loss / len(data_loader),
@@ -111,3 +115,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
                 "train/loss": train_loss / len(data_loader),
                 "epoch": epoch + 1,
             })
+        
+        if patience == num_patience:
+            print(f"early stopping at {epoch + 1}epoch")
+            break

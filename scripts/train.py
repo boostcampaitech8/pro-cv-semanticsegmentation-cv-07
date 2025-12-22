@@ -1,5 +1,5 @@
 from src.data.train_data import XRayDataset
-from src.configs.config import BATCH_SIZE, CLASSES, LR, SAVED_DIR, RANDOM_SEED, NUM_EPOCHS, VAL_EVERY
+from src.configs.config import BATCH_SIZE, CLASSES, LR, SAVED_DIR, RANDOM_SEED, NUM_EPOCHS, VAL_EVERY, NUM_PATIENCE
 from src.utils.set_seed import set_seed
 from src.engine.trainer import train
 import os
@@ -63,11 +63,10 @@ def main():
     in_channels = model.classifier[-1].in_channels
     model.classifier[-1] = nn.Conv2d(in_channels, len(CLASSES), kernel_size=1)
     
-    
     criterion = nn.BCEWithLogitsLoss() 
     optimizer = optim.Adam(params=model.parameters(), lr=LR, weight_decay=1e-6)
 
-    train(model, train_loader, valid_loader, criterion, optimizer, save_file_name=save_file_name)
+    train(model, train_loader, valid_loader, criterion, optimizer, save_file_name=save_file_name, num_patience=NUM_PATIENCE)
 
 
 if __name__ == '__main__':

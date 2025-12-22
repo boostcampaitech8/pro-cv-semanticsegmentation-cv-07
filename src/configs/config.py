@@ -22,6 +22,7 @@ RANDOM_SEED = 21
 
 NUM_EPOCHS = 90
 VAL_EVERY = 3
+NUM_PATIENCE = 5
 
 
 # 시각화를 위한 전역 변수
