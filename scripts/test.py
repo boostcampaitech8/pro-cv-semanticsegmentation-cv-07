@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 def main():
     set_seed(RANDOM_SEED)
     
-    save_file_name = "fcn_resnet50_best_model.pt"
+    save_file_name = 'unet_baseline_best_model.pt'
     model = torch.load(os.path.join(SAVED_DIR, save_file_name), weights_only=False)
 
     test_dataset = XRayInferenceDataset()
