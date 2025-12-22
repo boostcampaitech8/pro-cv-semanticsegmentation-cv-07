@@ -1,75 +1,76 @@
+from src.configs.defaults import SAVED_DIR
+from src.configs.run_config import parse_args, build_config
 from src.data.train_data import XRayDataset
-from src.configs.config import BATCH_SIZE, CLASSES, LR, SAVED_DIR, RANDOM_SEED, NUM_EPOCHS, VAL_EVERY, NUM_PATIENCE
 from src.utils.set_seed import set_seed
 from src.engine.trainer import train
+from src.models.smp_model import build_smp_model
 import os
 import wandb
 from dotenv import load_dotenv
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import segmentation_models_pytorch as smp
 
 
 def main():
-    set_seed(RANDOM_SEED)
+    args = parse_args()
+    cfg = build_config(args)
+    
+    set_seed(cfg.seed)
     
     if not os.path.exists(SAVED_DIR):                                                           
         os.makedirs(SAVED_DIR)
     
-    save_file_name = 'unet_baseline_best_model.pt'
+    if cfg.use_wandb:
+        load_dotenv()
     
-    load_dotenv()
-    
-    wandb.login(key=os.getenv("WANDB_API_KEY"))
+        wandb.login(key=os.getenv("WANDB_API_KEY"))
 
-    wandb.init(
-        project=os.getenv("WANDB_PROJECT"),
-        entity=os.getenv("WANDB_ENTITY"),
-        name=save_file_name,
-        config={
-            "batch_size": BATCH_SIZE,
-            "lr": LR,
-            "random_seed": RANDOM_SEED,
-            "num_epochs": NUM_EPOCHS,
-            "val_every": VAL_EVERY,
-        },
-        settings=wandb.Settings(_disable_stats=False),
-    )
+        wandb.init(
+            project=os.getenv("WANDB_PROJECT"),
+            entity=os.getenv("WANDB_ENTITY"),
+            name=cfg.model_name,
+            config={
+                "batch_size": cfg.batch_size,
+                "lr": cfg.lr,
+                "random_seed": cfg.seed,
+                "num_epochs": cfg.num_epochs,
+                "val_every": cfg.val_every,
+            },
+            settings=wandb.Settings(_disable_stats=False),
+        )
 
-    wandb.config.update({"monitor_memory": True})
+        wandb.config.update({"monitor_memory": True})
     
     train_dataset = XRayDataset(is_train=True)
     valid_dataset = XRayDataset(is_train=False)
 
     train_loader = DataLoader(
         dataset=train_dataset, 
-        batch_size=BATCH_SIZE,
+        batch_size=cfg.batch_size,
         shuffle=True,
-        num_workers=4,
+        num_workers=cfg.num_workers_train,
         drop_last=True,
     )
 
     # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
     valid_loader = DataLoader(
         dataset=valid_dataset, 
-        batch_size=BATCH_SIZE,
+        batch_size=cfg.batch_size,
         shuffle=False,
-        num_workers=0,
+        num_workers=cfg.num_workers_val,
         drop_last=False
     )
     
-    model = smp.Unet(
-        encoder_name="efficientnet-b0",
-        encoder_weights="imagenet",
-        in_channels=3,
-        classes=29,
-    )
+    model = build_smp_model(model_name=cfg.model_name)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
     
     criterion = nn.BCEWithLogitsLoss() 
-    optimizer = optim.Adam(params=model.parameters(), lr=LR, weight_decay=1e-6)
+    optimizer = optim.Adam(params=model.parameters(), lr=cfg.lr, weight_decay=1e-6)
 
-    train(model, train_loader, valid_loader, criterion, optimizer, save_file_name=save_file_name, num_patience=NUM_PATIENCE)
+    train(model, train_loader, valid_loader, criterion, optimizer, cfg)
 
 
 if __name__ == '__main__':

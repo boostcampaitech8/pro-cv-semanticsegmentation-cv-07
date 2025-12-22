@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from src.configs.config import IMAGE_ROOT, LABEL_ROOT, CLASSES, CLASS2IND
+from src.configs.defaults import IMAGE_ROOT, LABEL_ROOT, CLASSES, CLASS2IND
 from src.data.transforms import get_train_transform, get_valid_transform
 from src.data.utils import split_train_val
 

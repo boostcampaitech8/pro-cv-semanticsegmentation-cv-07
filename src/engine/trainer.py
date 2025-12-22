@@ -1,4 +1,4 @@
-from src.configs.config import CLASSES, NUM_EPOCHS, VAL_EVERY, SAVED_DIR
+from src.configs.defaults import CLASSES, SAVED_DIR
 from src.metrics.dice import dice_coef
 import os
 import wandb
@@ -56,7 +56,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     return total_loss / len(data_loader), avg_dice
 
 
-def train(model, data_loader, val_loader, criterion, optimizer, save_file_name, num_patience = 5):
+def train(model, data_loader, val_loader, criterion, optimizer, cfg):
     print(f'Start training..')
     
     model = model.cuda()
@@ -64,7 +64,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name, 
     best_dice = 0.
     patience = 0
     
-    for epoch in range(NUM_EPOCHS):
+    for epoch in range(cfg.num_epochs):
         train_loss = 0
         model.train()
 
@@ -86,16 +86,16 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name, 
             if (step + 1) % 25 == 0:
                 print(
                     f'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | '
-                    f'Epoch [{epoch+1}/{NUM_EPOCHS}], '
+                    f'Epoch [{epoch+1}/{cfg.num_epochs}], '
                     f'Step [{step+1}/{len(data_loader)}], '
                     f'Loss: {round(loss.item(),4)}'
                 )
              
-        if (epoch + 1) % VAL_EVERY == 0:
+        if (epoch + 1) % cfg.val_every == 0:
             val_loss, dice = validation(epoch + 1, model, val_loader, criterion)
             
             if best_dice < dice:
-                output_path = os.path.join(SAVED_DIR, save_file_name)
+                output_path = os.path.join(SAVED_DIR, cfg.save_name)
                 print(f"Best performance at epoch: {epoch + 1}, {best_dice:.4f} -> {dice:.4f}")
                 print(f"Save model in {output_path}")
                 best_dice = dice
@@ -104,18 +104,20 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name, 
             else:
                 patience += 1
             
-            wandb.log({
-                "train/loss": train_loss / len(data_loader),
-                "val/loss": val_loss,
-                "val/DICE": dice,
-                "epoch": epoch + 1,
-            })
+            if cfg.use_wandb:
+                wandb.log({
+                    "train/loss": train_loss / len(data_loader),
+                    "val/loss": val_loss,
+                    "val/DICE": dice,
+                    "epoch": epoch + 1,
+                })
         else:
-            wandb.log({
-                "train/loss": train_loss / len(data_loader),
-                "epoch": epoch + 1,
-            })
+            if cfg.use_wandb:
+                wandb.log({
+                    "train/loss": train_loss / len(data_loader),
+                    "epoch": epoch + 1,
+                })
         
-        if patience == num_patience:
+        if patience == cfg.num_patience:
             print(f"early stopping at {epoch + 1}epoch")
             break
