@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from src.configs.config import TEST_IMAGE_ROOT
+from src.configs.defaults import TEST_IMAGE_ROOT
 from .transforms import  get_test_transform
 
 

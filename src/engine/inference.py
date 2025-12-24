@@ -1,4 +1,4 @@
-from src.configs.config import CLASSES, IND2CLASS
+from src.configs.defaults import CLASSES, IND2CLASS
 from src.data.utils import encode_mask_to_rle
 from tqdm.auto import tqdm
 import torch

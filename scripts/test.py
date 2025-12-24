@@ -1,5 +1,5 @@
 from src.data.test_data import XRayInferenceDataset
-from src.configs.config import SAVED_DIR, RANDOM_SEED
+from src.configs.defaults import SAVED_DIR, RANDOM_SEED
 from src.utils.set_seed import set_seed
 from src.engine.inference import test
 import os
@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 def main():
     set_seed(RANDOM_SEED)
     
-    save_file_name = 'unet_baseline_best_model.pt'
+    save_file_name = 'segformer_best.pt'
     model = torch.load(os.path.join(SAVED_DIR, save_file_name), weights_only=False)
 
     test_dataset = XRayInferenceDataset()
