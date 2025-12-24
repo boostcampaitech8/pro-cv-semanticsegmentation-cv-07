@@ -30,7 +30,7 @@ def main():
         wandb.init(
             project=os.getenv("WANDB_PROJECT"),
             entity=os.getenv("WANDB_ENTITY"),
-            name=cfg.model_name,
+            name=f"{cfg.model_name}({cfg.encoder_name})",
             config={
                 "batch_size": cfg.batch_size,
                 "lr": cfg.lr,
@@ -63,7 +63,7 @@ def main():
         drop_last=False
     )
     
-    model = build_smp_model(model_name=cfg.model_name)
+    model = build_smp_model(cfg)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 @dataclass
 class TrainConfig:
     model_name: str
+    encoder_name: str
     save_name: str
     
     seed: int

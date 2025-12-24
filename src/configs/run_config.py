@@ -7,7 +7,8 @@ from src.configs.train_config import TrainConfig
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model", type=str)
+    parser.add_argument("--model", type=str, default='upernet')
+    parser.add_argument("--encoder", type=str)
     
     parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
     
@@ -23,7 +24,8 @@ def parse_args():
 def build_config(args):
     return TrainConfig(
         model_name=args.model,
-        save_name=f"{args.model}_best.pt",
+        encoder_name=args.encoder,
+        save_name=f"{args.model}_{args.encoder}_best.pt",
 
         batch_size=args.batch_size,
         num_workers_train=NUM_WORKERS_TRAIN,
