@@ -25,7 +25,7 @@ def build_smp_model(model_name, encoder_name="resnet50", encoder_weights="imagen
 
     model_cls = SMP_MODELS[model_name]
     
-    if model_name in ["segformer", "dpt", "upernet"]:
+    if model_name in ["dpt"]:
         return model_cls(
             in_channels=in_channels,
             classes=classes,
@@ -36,4 +36,6 @@ def build_smp_model(model_name, encoder_name="resnet50", encoder_weights="imagen
             encoder_weights=encoder_weights,
             in_channels=in_channels,
             classes=classes,
+            activation=None, 
+            decoder_use_batchnorm=False
         )

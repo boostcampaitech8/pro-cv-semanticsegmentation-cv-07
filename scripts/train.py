@@ -1,4 +1,4 @@
-from src.configs.defaults import SAVED_DIR
+from src.configs.defaults import SAVED_DIR, CLASSES
 from src.configs.run_config import parse_args, build_config
 from src.data.train_data import XRayDataset
 from src.utils.set_seed import set_seed
