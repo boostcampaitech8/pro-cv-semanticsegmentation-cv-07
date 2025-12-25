@@ -22,7 +22,7 @@ def main():
         os.makedirs(SAVED_DIR)
     
     save_file_name = "SWIN-UNET_best_model.pt"
-    
+    checkpoint_path = os.path.join(SAVED_DIR, save_file_name)
     try:
         from external.Swin_Unet.networks.vision_transformer import SwinUnet 
         from external.Swin_Unet.config import get_config
@@ -64,7 +64,7 @@ def main():
     # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
     valid_loader = DataLoader(
         dataset=valid_dataset, 
-        batch_size=8,
+        batch_size=BATCH_SIZE,
         shuffle=False,
         num_workers=0,
         drop_last=False
@@ -78,36 +78,67 @@ def main():
     )
 
     
-   
+
     config.MODEL.NUM_CLASSES = len(CLASSES)
-    config.DATA.NUM_CLASSES = len(CLASSES)
     
+    #512에 맞게끔 윈도우 사이즈?
+    config.DATA.NUM_CLASSES = len(CLASSES)
+    config.MODEL.SWIN.WINDOW_SIZE = 8
 
     config.DATA.IMG_SIZE = 512
+    
 
-    # 🔹 Swin 설정
-    config.MODEL.SWIN.PATCH_SIZE = 4
-    config.MODEL.SWIN.WINDOW_SIZE = 16
+    
     
     
     
     model = SwinUnet(config,num_classes=len(CLASSES))
     model = model.cuda()
-    
-    
+    #사전학습된 가중치가 224 7 인데 가져오는게 맞을까?
+    PRETRAINED_WEIGHTS_PATH = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+        "external/Swin_Unet/pretrained_ckpt/swin_tiny_patch4_window7_224.pth"
+    )
+
+    if os.path.exists(PRETRAINED_WEIGHTS_PATH):
+        print(f"✅ Loading pretrained weights from: {PRETRAINED_WEIGHTS_PATH}")
+        
+        # 가중치 파일 로드
+        checkpoint = torch.load(PRETRAINED_WEIGHTS_PATH, map_location='cpu')
+        
+        # Swin-Unet 깃허브의 가중치 키는 'model' 아래에 저장되어 있습니다.
+        state_dict = checkpoint.get('model', checkpoint) 
+        
+        # 최종 분류 레이어는 클래스 수가 다르므로 로드하지 않도록 strict=False를 사용합니다.
+        model.load_state_dict(state_dict, strict=False)
+        print("✅ Pretrained weights loaded successfully (skipping mismatching layers).")
+    else:
+        print(f"❌ Pretrained weights file not found at {PRETRAINED_WEIGHTS_PATH}. Starting training from scratch.")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
-
-
-
+    
     criterion = nn.BCEWithLogitsLoss() 
     optimizer = optim.Adam(params=model.parameters(), lr=LR, weight_decay=1e-6)
+    start_epoch=40 #임의로 설정 . 왜냐면 model 저장할 떄 epoch를 저장 안해서. 40번 반복했잖아.
+    if os.path.exists(checkpoint_path):
+        print(f"🔄 Loading checkpoint from {checkpoint_path}")
+        checkpoint_model = torch.load(checkpoint_path, map_location='cuda')
+        
+        if isinstance(checkpoint_model, torch.nn.Module):
+            model = checkpoint_model.cuda()
+            optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-6)
+            print(f"✅ Checkpoint loaded. Resuming from epoch {start_epoch + 1}")
+
+
+
+
+    
 
 
 
 
 
-#    train(model, train_loader, valid_loader, criterion, optimizer, save_file_name=save_file_name)
+    train(model, train_loader, valid_loader, criterion, optimizer, save_file_name=save_file_name,start_epoch=start_epoch)
 
 
 if __name__ == '__main__':

@@ -22,7 +22,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
         for step, (images, masks) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images, masks = images.cuda(), masks.cuda()         
             
-            outputs = model(images)['out']
+            outputs = model(images)#['out'] 이거는 unet이 반환하는게 이렇다는데
             
             output_h, output_w = outputs.size(-2), outputs.size(-1)
             mask_h, mask_w = masks.size(-2), masks.size(-1)
@@ -56,13 +56,13 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     return total_loss / len(data_loader), avg_dice
 
 
-def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
+def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,start_epoch):
     print(f'Start training..')
     
     n_class = len(CLASSES)
     best_dice = 0.
     
-    for epoch in range(NUM_EPOCHS):
+    for epoch in range(start_epoch,NUM_EPOCHS):
         train_loss = 0
         model.train()
 
@@ -71,7 +71,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name):
             images, masks = images.cuda(), masks.cuda()
             model = model.cuda()
             
-            outputs = model(images)['out']
+            outputs = model(images)#['out']
             
             # loss를 계산합니다.
             loss = criterion(outputs, masks)

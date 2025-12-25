@@ -1,7 +1,7 @@
 # 데이터셋 관련 설정
-IMAGE_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/train/DCM"
-TEST_IMAGE_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/test/DCM"
-LABEL_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/train/outputs_json"
+IMAGE_ROOT = "/data/ephemeral/home/train/DCM"
+TEST_IMAGE_ROOT = "/data/ephemeral/home/test/DCM"
+LABEL_ROOT = "/data/ephemeral/home/train/outputs_json"
 SAVED_DIR = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/outputs/checkpoints"
 CLASSES = [
     'finger-1', 'finger-2', 'finger-3', 'finger-4', 'finger-5',
@@ -20,7 +20,7 @@ BATCH_SIZE = 8
 LR = 1e-4
 RANDOM_SEED = 21
 
-NUM_EPOCHS = 5
+NUM_EPOCHS = 90
 VAL_EVERY = 1
 
 
