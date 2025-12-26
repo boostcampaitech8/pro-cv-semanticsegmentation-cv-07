@@ -4,6 +4,7 @@ from src.data.train_data import XRayDataset
 from src.configs.config import BATCH_SIZE, CLASSES, LR, SAVED_DIR, RANDOM_SEED, NUM_EPOCHS, VAL_EVERY
 from src.utils.set_seed import set_seed
 from src.engine.trainer import train
+from src.utils.earlystopping import EarlyStopping
 import os
 import wandb
 from dotenv import load_dotenv
@@ -17,7 +18,7 @@ import torch
 
 def main():
     set_seed(RANDOM_SEED)
-    
+    BATCH_SIZE=4
     if not os.path.exists(SAVED_DIR):                                                           
         os.makedirs(SAVED_DIR)
     
@@ -44,14 +45,17 @@ def main():
             "random_seed": RANDOM_SEED,
             "num_epochs": NUM_EPOCHS,
             "val_every": VAL_EVERY,
+            "early_stopping_patience": 10
         },
         settings=wandb.Settings(_disable_stats=False),
     )
 
     wandb.config.update({"monitor_memory": True})
     
-    train_dataset = XRayDataset(is_train=True)
-    valid_dataset = XRayDataset(is_train=False)
+    FOLD = 0  # 바꾸면서 실험
+
+    train_dataset = XRayDataset(fold=FOLD, is_train=True)
+    valid_dataset = XRayDataset(fold=FOLD, is_train=False)
 
     train_loader = DataLoader(
         dataset=train_dataset, 
@@ -88,7 +92,7 @@ def main():
     config.DATA.IMG_SIZE = 512
     
 
-    
+    #이거 early stop 걸고 , 모델 계속돌리자.
     
     
     
@@ -119,26 +123,58 @@ def main():
     
     criterion = nn.BCEWithLogitsLoss() 
     optimizer = optim.Adam(params=model.parameters(), lr=LR, weight_decay=1e-6)
-    start_epoch=40 #임의로 설정 . 왜냐면 model 저장할 떄 epoch를 저장 안해서. 40번 반복했잖아.
+    start_epoch=0 #임의로 설정 . 왜냐면 model 저장할 떄 epoch를 저장 안해서. 40번 반복했잖아.
+    
+    
+    early_stopping = EarlyStopping(
+        patience=10,  # 15 epoch 동안 개선이 없으면 중단
+        verbose=True,
+        path=checkpoint_path
+    )
+    
+    
     if os.path.exists(checkpoint_path):
         print(f"🔄 Loading checkpoint from {checkpoint_path}")
-        checkpoint_model = torch.load(checkpoint_path, map_location='cuda')
-        
-        if isinstance(checkpoint_model, torch.nn.Module):
-            model = checkpoint_model.cuda()
-            optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-6)
+        try:
+            # 1. 일단 로드합니다.
+            loaded_data = torch.load(checkpoint_path, map_location=device)
+            
+            # 2. 로드된 데이터가 "모델 객체(옛날 방식)"인지 확인합니다.
+            if isinstance(loaded_data, nn.Module):
+                print("⚠️ Old checkpoint format detected (Model Object).")
+                
+                # 모델 가중치만 추출해서 현재 모델에 덮어씌움
+                model.load_state_dict(loaded_data.state_dict())
+                
+                #용
+                
+            # 3. 로드된 데이터가 "딕셔너리(새 방식)"인지 확인합니다.
+            elif isinstance(loaded_data, dict):
+                print("✅ New checkpoint format detected (Dictionary).")
+                
+                model.load_state_dict(loaded_data['model_state_dict'])
+                
+                if 'optimizer_state_dict' in loaded_data:
+                    optimizer.load_state_dict(loaded_data['optimizer_state_dict'])
+                
+                start_epoch = loaded_data.get('epoch', 0)
+                
+            else:
+                print("❌ Unknown checkpoint format.")
+
             print(f"✅ Checkpoint loaded. Resuming from epoch {start_epoch + 1}")
-
-
+            
+        except Exception as e:
+            print(f"❌ Checkpoint load failed ({e}). Starting training from scratch.")
+    else:
+        print("❌ Checkpoint not found. Starting training from scratch.")
 
 
     
 
 
 
-
-
-    train(model, train_loader, valid_loader, criterion, optimizer, save_file_name=save_file_name,start_epoch=start_epoch)
+    train(model, train_loader, valid_loader, criterion, optimizer, save_file_name=save_file_name,start_epoch=start_epoch,early_stopping=early_stopping)
 
 
 if __name__ == '__main__':
