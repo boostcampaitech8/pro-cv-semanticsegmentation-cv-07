@@ -7,6 +7,11 @@ class TrainConfig:
     save_name: str
     pretrained: bool
     
+    # 🔹 boundary experiment
+    boundary_mode: str = "none"
+    use_refinement: bool = False
+    use_transformer: bool = False
+
     seed: int
 
     batch_size: int

@@ -20,6 +20,7 @@ def main():
     model = torch.load(os.path.join(SAVED_DIR, args.ckpt), weights_only=False)
 
     model = model.cuda()
+    model.eval()
 
     test_dataset = XRayInferenceDataset()
 

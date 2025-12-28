@@ -12,6 +12,12 @@ def parse_args():
 
     # ✅ 추가
     parser.add_argument("--fold", type=int, default=0)
+
+    # 🔹 boundary switches
+    parser.add_argument("--boundary_mode", type=str, default="none",
+                        choices=["none", "dual", "basnet"])
+    parser.add_argument("--use_refinement", action="store_true")
+    parser.add_argument("--use_transformer", action="store_true")
     
     parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
     
@@ -30,9 +36,20 @@ def build_config(args):
     return TrainConfig(
         model_name=args.model,
         encoder_name=args.encoder,
-        save_name = (f"{args.model}_{args.encoder}_" f"{'pre' if args.pretrained else 'scratch'}_" f"fold{args.fold}_" f"e{args.num_epochs}_best.pt"),
+        save_name = (
+            f"{args.model}_"
+            f"{args.encoder}_"
+            f"{args.boundary_mode}_"
+            f"{'pre' if args.pretrained else 'scratch'}_"
+            f"fold{args.fold}_"
+            f"e{args.num_epochs}_best.pt"
+        ),
 
         pretrained=args.pretrained,
+
+        boundary_mode=args.boundary_mode,
+        use_refinement=args.use_refinement,
+        use_transformer=args.use_transformer,
 
         batch_size=args.batch_size,
         num_workers_train=NUM_WORKERS_TRAIN,
