@@ -65,6 +65,12 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
 def train(model, data_loader, val_loader, criterion, optimizer, cfg):
     print(f'Start training..')
     
+    SPIKE_META_PATH = os.path.join(SAVED_DIR, "spike_meta.txt")
+
+    # 🔹 새 실험 시작 시 spike meta 초기화
+    if os.path.exists(SPIKE_META_PATH):
+        os.remove(SPIKE_META_PATH)
+
     model = model.cuda()
     n_class = len(CLASSES)
     best_dice = 0.
@@ -128,6 +134,14 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                     spike_name = f"spike_{direction}_e{epoch+1}_d{dice:.4f}.pt"
                     torch.save(model, os.path.join(SAVED_DIR, spike_name))
                     print(f"[SPIKE-SAVE] {direction.upper()} ΔDice={delta:+.4f}")
+                    
+                    with open(SPIKE_META_PATH, "a") as f:
+                        f.write(
+                            f"epoch={epoch+1}, "
+                            f"direction={direction}, "
+                            f"dice={dice:.4f}, "
+                            f"delta={delta:+.4f}\n"
+                        )
 
             # 🔹 class-wise spike 감지
             if prev_class_dice is not None:
@@ -148,6 +162,11 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                 best_dice = dice
                 torch.save(model, output_path)
                 patience = 0
+                
+                with open(SPIKE_META_PATH, "a") as f:
+                    f.write(
+                        f"[BEST] epoch={epoch+1}, dice={dice:.4f}\n"
+                    )
             else:
                 if abs_delta is not None and abs_delta < SPIKE_OBS_TH:
                     patience += 1

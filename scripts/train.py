@@ -27,18 +27,20 @@ def main():
     
         wandb.login(key=os.getenv("WANDB_API_KEY"))
 
+        run_name = cfg.save_name.replace(".pt", "")
+
         wandb.init(
             project=os.getenv("WANDB_PROJECT"),
             entity=os.getenv("WANDB_ENTITY"),
-            name=f"{cfg.model_name}({cfg.encoder_name})",
+            name=run_name,   # ✅ save_name 기반
             config={
                 "batch_size": cfg.batch_size,
                 "lr": cfg.lr,
                 "random_seed": cfg.seed,
                 "num_epochs": cfg.num_epochs,
                 "val_every": cfg.val_every,
+                "pretrained": cfg.pretrained,
             },
-            settings=wandb.Settings(_disable_stats=False),
         )
 
         wandb.config.update({"monitor_memory": True})

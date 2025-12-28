@@ -5,6 +5,7 @@ class TrainConfig:
     model_name: str
     encoder_name: str
     save_name: str
+    pretrained: bool
     
     seed: int
 

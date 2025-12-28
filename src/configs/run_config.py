@@ -19,13 +19,17 @@ def parse_args():
     
     parser.add_argument("--use_wandb", action="store_true", help="use wandb logging")
 
+    parser.add_argument("--pretrained", action="store_true", help="use imagenet pretrained encoder")
+
     return parser.parse_args()
 
 def build_config(args):
     return TrainConfig(
         model_name=args.model,
         encoder_name=args.encoder,
-        save_name=f"{args.model}_{args.encoder}_e{args.num_epochs}_best.pt",
+        save_name = (f"{args.model}_{args.encoder}_" f"{'pre' if args.pretrained else 'scratch'}_" f"e{args.num_epochs}_best.pt"),
+
+        pretrained=args.pretrained,
 
         batch_size=args.batch_size,
         num_workers_train=NUM_WORKERS_TRAIN,
