@@ -2,16 +2,24 @@ from src.data.test_data import XRayInferenceDataset
 from src.configs.defaults import SAVED_DIR, RANDOM_SEED
 from src.utils.set_seed import set_seed
 from src.engine.inference import test
+import argparse
 import os
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", type=str, required=True)
+    parser.add_argument("--encoder", type=str, required=True)
+    parser.add_argument("--num_epochs", type=int, required=True)
+    return parser.parse_args()
 
 def main():
+    args = parse_args()
     set_seed(RANDOM_SEED)
     
-    save_file_name = 'segformer_best.pt'
+    save_file_name = f"{args.model}_{args.encoder}_e{args.num_epochs}_best.pt"
     model = torch.load(os.path.join(SAVED_DIR, save_file_name), weights_only=False)
 
     test_dataset = XRayInferenceDataset()

@@ -39,7 +39,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
             outputs = (outputs > thr).detach().cpu()
             masks = masks.detach().cpu()
             
-            dice = dice_coef(outputs, masks)
+            dice = dice_coef(masks, outputs)
             dices.append(dice)
                 
     dices = torch.cat(dices, 0)
@@ -52,8 +52,14 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     print(dice_str)
     
     avg_dice = torch.mean(dices_per_class).item()
-    
-    return total_loss / len(data_loader), avg_dice
+
+    # 🔹 class-wise dice dict 생성
+    dice_class_dict = {
+        f"val_class/{c}": d.item()
+        for c, d in zip(CLASSES, dices_per_class)
+    }
+
+    return total_loss / len(data_loader), avg_dice, dice_class_dict, dices_per_class
 
 
 def train(model, data_loader, val_loader, criterion, optimizer, cfg):
@@ -63,7 +69,12 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
     n_class = len(CLASSES)
     best_dice = 0.
     patience = 0
-    
+
+    prev_dice = None
+    prev_class_dice = None
+    SPIKE_SAVE_TH = 0.05
+    SPIKE_OBS_TH = 0.03
+
     for epoch in range(cfg.num_epochs):
         train_loss = 0
         model.train()
@@ -92,7 +103,43 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                 )
              
         if (epoch + 1) % cfg.val_every == 0:
-            val_loss, dice = validation(epoch + 1, model, val_loader, criterion)
+            val_loss, dice, dice_class_dict, class_dice = validation(epoch + 1, model, val_loader, criterion)
+            # ===== [ADD] dice 변화량 계산 (validation 직후) =====
+            delta = None
+            abs_delta = None
+            if prev_dice is not None:
+                delta = dice - prev_dice
+                abs_delta = abs(delta)
+
+            # 🔹 spike 감지
+            if abs_delta is not None:
+                # 1️⃣ 관찰용 spike
+                if abs_delta >= SPIKE_OBS_TH:
+                    print(f"[OBS] ΔDice={delta:+.4f} at epoch {epoch+1}")
+                    if cfg.use_wandb:
+                        wandb.log({
+                            "debug/dice_spike": delta,
+                            "epoch": epoch + 1
+                        })
+
+                # 2️⃣ 저장용 spike
+                if abs_delta >= SPIKE_SAVE_TH:
+                    direction = "up" if delta > 0 else "down"
+                    spike_name = f"spike_{direction}_e{epoch+1}_d{dice:.4f}.pt"
+                    torch.save(model, os.path.join(SAVED_DIR, spike_name))
+                    print(f"[SPIKE-SAVE] {direction.upper()} ΔDice={delta:+.4f}")
+
+            # 🔹 class-wise spike 감지
+            if prev_class_dice is not None:
+                class_delta = class_dice - prev_class_dice
+                for c, d in zip(CLASSES, class_delta):
+                    if abs(d.item()) >= 0.05:
+                        print(f"[CLASS-SPIKE] {c}: ΔDice={d.item():+.4f} at epoch {epoch+1}")
+                        if cfg.use_wandb:
+                            wandb.log({
+                                f"debug/class_spike/{c}": d.item(),
+                                "epoch": epoch + 1
+                            })
             
             if best_dice < dice:
                 output_path = os.path.join(SAVED_DIR, cfg.save_name)
@@ -102,15 +149,23 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                 torch.save(model, output_path)
                 patience = 0
             else:
-                patience += 1
+                if abs_delta is not None and abs_delta < SPIKE_OBS_TH:
+                    patience += 1
+
+            prev_dice = dice
+            prev_class_dice = class_dice
             
             if cfg.use_wandb:
-                wandb.log({
+                log_dict = {
                     "train/loss": train_loss / len(data_loader),
                     "val/loss": val_loss,
                     "val/DICE": dice,
                     "epoch": epoch + 1,
-                })
+                }
+                # 🔹 class-wise dice 추가
+                log_dict.update(dice_class_dict)
+
+                wandb.log(log_dict)
         else:
             if cfg.use_wandb:
                 wandb.log({
