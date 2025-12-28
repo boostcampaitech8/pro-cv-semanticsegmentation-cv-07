@@ -43,8 +43,12 @@ def main():
 
         wandb.config.update({"monitor_memory": True})
     
-    train_dataset = XRayDataset(is_train=True)
-    valid_dataset = XRayDataset(is_train=False)
+    FOLD = 0  # 바꾸면서 실험
+
+    train_dataset = XRayDataset(fold=FOLD, is_train=True)
+    valid_dataset = XRayDataset(fold=FOLD, is_train=False)
+
+    print(f"[Dataset] Fold {FOLD} | Train size: {len(train_dataset)} | Val size: {len(valid_dataset)}")
 
     train_loader = DataLoader(
         dataset=train_dataset, 

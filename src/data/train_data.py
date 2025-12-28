@@ -6,85 +6,61 @@ import torch
 from torch.utils.data import Dataset
 from src.configs.defaults import IMAGE_ROOT, LABEL_ROOT, CLASSES, CLASS2IND
 from src.data.transforms import get_train_transform, get_valid_transform
-from src.data.utils import split_train_val
 
 class XRayDataset(Dataset):
-    def __init__(self, is_train=True):
-        
-        # 이미지 및 라벨 불러오기
-        pngs = {
-            os.path.relpath(os.path.join(root, fname), start=IMAGE_ROOT)
-            for root, _dirs, files in os.walk(IMAGE_ROOT)
-            for fname in files
-            if os.path.splitext(fname)[1].lower() == ".png"
-        }
-        jsons = {
-            os.path.relpath(os.path.join(root, fname), start=LABEL_ROOT)
-            for root, _dirs, files in os.walk(LABEL_ROOT)
-            for fname in files
-            if os.path.splitext(fname)[1].lower() == ".json"
-        }
-        
-        # 모든 .png 파일에 대해 .json 파일이 존재하는지 확인
-        jsons_fn_prefix = {os.path.splitext(fname)[0] for fname in jsons}
-        pngs_fn_prefix = {os.path.splitext(fname)[0] for fname in pngs}
-
-        assert len(jsons_fn_prefix - pngs_fn_prefix) == 0
-        assert len(pngs_fn_prefix - jsons_fn_prefix) == 0
-        
-        pngs = sorted(pngs)
-        jsons = sorted(jsons)
-        
-        _filenames = np.array(pngs)
-        _labelnames = np.array(jsons)
-        
-        filenames, labelnames = split_train_val(_filenames, _labelnames, n_splits=5, is_train=is_train)
-        
-        self.filenames = filenames
-        self.labelnames = labelnames
+    def __init__(self, fold, is_train=True):
         self.is_train = is_train
-        self.transforms = get_train_transform() if self.is_train else get_valid_transform()
-    
+        self.transforms = get_train_transform() if is_train else get_valid_transform()
+
+        # 1) split json 로드
+        split_path = "src/datasets/splits/splits_5fold_subject.json"
+        with open(split_path) as f:
+            splits = json.load(f)
+
+        id_list = splits[f"fold_{fold}"]["train" if is_train else "val"]
+
+        # 2) ID → PNG 2장씩 펼치기
+        self.filenames = []
+        self.labelnames = []
+
+        for id_ in id_list:
+            img_dir = os.path.join(IMAGE_ROOT, id_)
+            lbl_dir = os.path.join(LABEL_ROOT, id_)
+
+            pngs = sorted([f for f in os.listdir(img_dir) if f.endswith(".png")])
+            for png in pngs:
+                self.filenames.append(os.path.join(id_, png))
+                self.labelnames.append(os.path.join(id_, png.replace(".png", ".json")))
+
     def __len__(self):
         return len(self.filenames)
-    
-    def __getitem__(self, item):
-        image_name = self.filenames[item]
-        image_path = os.path.join(IMAGE_ROOT, image_name)
-        
-        image = cv2.imread(image_path)
-        image = image / 255.
-        
-        label_name = self.labelnames[item]
-        label_path = os.path.join(LABEL_ROOT, label_name)
-        
-        # (H, W, NC) 모양의 label을 생성합니다.
-        label_shape = tuple(image.shape[:2]) + (len(CLASSES), )
-        label = np.zeros(label_shape, dtype=np.uint8)
-        
-        # label 파일을 읽습니다.
-        with open(label_path, "r") as f:
-            annotations = json.load(f)
-        annotations = annotations["annotations"]
-        
-        # 클래스 별로 처리합니다.
-        for ann in annotations:
-            c = ann["label"]
-            class_ind = CLASS2IND[c]
-            points = np.array(ann["points"])
-            
-            # polygon 포맷을 dense한 mask 포맷으로 바꿉니다.
-            class_label = np.zeros(image.shape[:2], dtype=np.uint8)
-            cv2.fillPoly(class_label, [points], 1)
-            label[..., class_ind] = class_label
-        
-        if self.transforms is not None:
-            inputs = {"image": image, "mask": label} if self.is_train else {"image": image}
-            result = self.transforms(**inputs)
-            
-            image = result["image"]
-            label = result["mask"] if self.is_train else label
 
+    def __getitem__(self, idx):
+        image_path = os.path.join(IMAGE_ROOT, self.filenames[idx])
+        label_path = os.path.join(LABEL_ROOT, self.labelnames[idx])
+
+        image = cv2.imread(image_path)
+        assert image is not None, f"Failed to read image: {image_path}"
+        image = image / 255.0
+
+        label = np.zeros((*image.shape[:2], len(CLASSES)), dtype=np.uint8)
+        with open(label_path) as f:
+            anns = json.load(f)["annotations"]
+
+        for ann in anns:
+            cls = CLASS2IND[ann["label"]]
+            pts = np.array(ann["points"])
+            mask = np.zeros(image.shape[:2], np.uint8)
+            cv2.fillPoly(mask, [pts], 1)
+            label[..., cls] = mask
+
+        if self.transforms:
+            out = self.transforms(image=image, mask=label)
+            image, label = out["image"], out["mask"]
+
+        image = image.astype(np.float32)
+        label = label.astype(np.float32)
+        
         # to tenser will be done later
         image = image.transpose(2, 0, 1)
         label = label.transpose(2, 0, 1)
