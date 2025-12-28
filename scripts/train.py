@@ -15,14 +15,18 @@ from torchvision import models
 import sys
 import ml_collections
 import torch
+from src.losses.diceloss import DiceLoss
 
+# loss 바꿈. 이거 확인
+#데이터 경로..
 def main():
     set_seed(RANDOM_SEED)
     BATCH_SIZE=4
+    NUM_EPOCHS=200
     if not os.path.exists(SAVED_DIR):                                                           
         os.makedirs(SAVED_DIR)
     
-    save_file_name = "SWIN-UNET_best_model.pt"
+    save_file_name = "SWIN-UNET_best_model_1024_4.pt"
     checkpoint_path = os.path.join(SAVED_DIR, save_file_name)
     try:
         from external.Swin_Unet.networks.vision_transformer import SwinUnet 
@@ -57,6 +61,8 @@ def main():
     train_dataset = XRayDataset(fold=FOLD, is_train=True)
     valid_dataset = XRayDataset(fold=FOLD, is_train=False)
 
+    print("train_dataset:",train_dataset.__len__())
+    print("valid_dataset:",valid_dataset.__len__())
     train_loader = DataLoader(
         dataset=train_dataset, 
         batch_size=BATCH_SIZE,
@@ -89,9 +95,9 @@ def main():
     config.DATA.NUM_CLASSES = len(CLASSES)
     config.MODEL.SWIN.WINDOW_SIZE = 8
 
-    config.DATA.IMG_SIZE = 512
+    config.DATA.IMG_SIZE = 1024
     
-
+    config.NUM_EPOCHS = 200
     #이거 early stop 걸고 , 모델 계속돌리자.
     
     
@@ -121,7 +127,12 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
     
-    criterion = nn.BCEWithLogitsLoss() 
+    criterion = lambda x, y: (
+        nn.BCEWithLogitsLoss()(x, y.float()) +
+        DiceLoss()(x, y)
+    )
+
+    #criterion = nn.BCEWithLogitsLoss() 
     optimizer = optim.Adam(params=model.parameters(), lr=LR, weight_decay=1e-6)
     start_epoch=0 #임의로 설정 . 왜냐면 model 저장할 떄 epoch를 저장 안해서. 40번 반복했잖아.
     
@@ -133,41 +144,41 @@ def main():
     )
     
     
-    if os.path.exists(checkpoint_path):
-        print(f"🔄 Loading checkpoint from {checkpoint_path}")
-        try:
-            # 1. 일단 로드합니다.
-            loaded_data = torch.load(checkpoint_path, map_location=device)
+    # if os.path.exists(checkpoint_path):
+    #     print(f"🔄 Loading checkpoint from {checkpoint_path}")
+    #     try:
+    #         # 1. 일단 로드합니다.
+    #         loaded_data = torch.load(checkpoint_path, map_location=device)
             
-            # 2. 로드된 데이터가 "모델 객체(옛날 방식)"인지 확인합니다.
-            if isinstance(loaded_data, nn.Module):
-                print("⚠️ Old checkpoint format detected (Model Object).")
+    #         # 2. 로드된 데이터가 "모델 객체(옛날 방식)"인지 확인합니다.
+    #         if isinstance(loaded_data, nn.Module):
+    #             print("⚠️ Old checkpoint format detected (Model Object).")
                 
-                # 모델 가중치만 추출해서 현재 모델에 덮어씌움
-                model.load_state_dict(loaded_data.state_dict())
+    #             # 모델 가중치만 추출해서 현재 모델에 덮어씌움
+    #             model.load_state_dict(loaded_data.state_dict())
                 
-                #용
+    #             #용
                 
-            # 3. 로드된 데이터가 "딕셔너리(새 방식)"인지 확인합니다.
-            elif isinstance(loaded_data, dict):
-                print("✅ New checkpoint format detected (Dictionary).")
+    #         # 3. 로드된 데이터가 "딕셔너리(새 방식)"인지 확인합니다.
+    #         elif isinstance(loaded_data, dict):
+    #             print("✅ New checkpoint format detected (Dictionary).")
                 
-                model.load_state_dict(loaded_data['model_state_dict'])
+    #             model.load_state_dict(loaded_data['model_state_dict'])
                 
-                if 'optimizer_state_dict' in loaded_data:
-                    optimizer.load_state_dict(loaded_data['optimizer_state_dict'])
+    #             if 'optimizer_state_dict' in loaded_data:
+    #                 optimizer.load_state_dict(loaded_data['optimizer_state_dict'])
                 
-                start_epoch = loaded_data.get('epoch', 0)
+    #             start_epoch = loaded_data.get('epoch', 0)
                 
-            else:
-                print("❌ Unknown checkpoint format.")
+    #         else:
+    #             print("❌ Unknown checkpoint format.")
 
-            print(f"✅ Checkpoint loaded. Resuming from epoch {start_epoch + 1}")
+    #         print(f"✅ Checkpoint loaded. Resuming from epoch {start_epoch + 1}")
             
-        except Exception as e:
-            print(f"❌ Checkpoint load failed ({e}). Starting training from scratch.")
-    else:
-        print("❌ Checkpoint not found. Starting training from scratch.")
+    #     except Exception as e:
+    #         print(f"❌ Checkpoint load failed ({e}). Starting training from scratch.")
+    # else:
+    #     print("❌ Checkpoint not found. Starting training from scratch.")
 
 
     
