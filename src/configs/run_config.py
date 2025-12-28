@@ -9,6 +9,9 @@ def parse_args():
 
     parser.add_argument("--model", type=str, default='unetpp')
     parser.add_argument("--encoder", type=str, default='resnet50')
+
+    # ✅ 추가
+    parser.add_argument("--fold", type=int, default=0)
     
     parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
     
@@ -27,7 +30,7 @@ def build_config(args):
     return TrainConfig(
         model_name=args.model,
         encoder_name=args.encoder,
-        save_name = (f"{args.model}_{args.encoder}_" f"{'pre' if args.pretrained else 'scratch'}_" f"e{args.num_epochs}_best.pt"),
+        save_name = (f"{args.model}_{args.encoder}_" f"{'pre' if args.pretrained else 'scratch'}_" f"fold{args.fold}_" f"e{args.num_epochs}_best.pt"),
 
         pretrained=args.pretrained,
 

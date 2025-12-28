@@ -1,16 +1,16 @@
 import albumentations as A
 
-def get_train_transform():
+def get_train_transform(size=512):
     return A.Compose([
-        A.Resize(512, 512),
+        A.Resize(size, size),
     ])
 
-def get_valid_transform():
+def get_valid_transform(size=512):
     return A.Compose([
-        A.Resize(512, 512)
+        A.Resize(size, size)
     ])
 
-def get_test_transform():
+def get_test_transform(size=512):
     return A.Compose([
-        A.Resize(512, 512)
+        A.Resize(size, size)
     ])

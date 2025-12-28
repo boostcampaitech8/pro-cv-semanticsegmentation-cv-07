@@ -45,7 +45,7 @@ def main():
 
         wandb.config.update({"monitor_memory": True})
     
-    FOLD = 0  # 바꾸면서 실험
+    FOLD = args.fold  # 바꾸면서 실험
 
     train_dataset = XRayDataset(fold=FOLD, is_train=True)
     valid_dataset = XRayDataset(fold=FOLD, is_train=False)

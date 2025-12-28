@@ -1,5 +1,6 @@
+# etc/visualization.py
+
 import os
-import cv2
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,9 +10,9 @@ from src.configs.defaults import CLASSES, PALETTE
 from src.metrics.dice import dice_coef
 
 
-# =========================
-# 기본 유틸
-# =========================
+# ======================================================
+# Common utils
+# ======================================================
 
 def label2rgb(label):
     """
@@ -33,10 +34,6 @@ def load_model(ckpt_path):
     return model
 
 
-# =========================
-# Dice 계산 (class-wise)
-# =========================
-
 @torch.no_grad()
 def compute_classwise_dice(model, dataloader, thr=0.5, max_batches=5):
     """
@@ -53,7 +50,6 @@ def compute_classwise_dice(model, dataloader, thr=0.5, max_batches=5):
 
         outputs = model(images)
 
-        # 🔧 [ADD] prediction / GT 해상도 맞추기
         if outputs.shape[-2:] != masks.shape[-2:]:
             outputs = torch.nn.functional.interpolate(
                 outputs,
@@ -62,21 +58,18 @@ def compute_classwise_dice(model, dataloader, thr=0.5, max_batches=5):
                 align_corners=False
             )
 
-        outputs = torch.sigmoid(outputs)
-        outputs = (outputs > thr).float()
-
-        dice = dice_coef(masks, outputs)  # (B, C)
+        outputs = torch.sigmoid(outputs) > thr
+        dice = dice_coef(masks, outputs.float())
         dices.append(dice)
 
-    dices = torch.cat(dices, dim=0)      # (N, C)
-    return dices.mean(dim=0)              # (C,)
+    dices = torch.cat(dices, dim=0)
+    return dices.mean(dim=0)
 
-
-# =========================
-# Dice 변화 큰 class 자동 선택
-# =========================
 
 def select_topk_changed_classes(dice_prev, dice_spike, dice_next, k=3):
+    """
+    spike 중심 변화량 기준으로 class 선택
+    """
     score = (
         torch.abs(dice_spike - dice_prev) +
         torch.abs(dice_spike - dice_next)
@@ -85,9 +78,9 @@ def select_topk_changed_classes(dice_prev, dice_spike, dice_next, k=3):
     return topk.indices.tolist(), score
 
 
-# =========================
-# 시각화
-# =========================
+# ======================================================
+# Visualization core
+# ======================================================
 
 @torch.no_grad()
 def visualize_model_comparison(
@@ -98,11 +91,9 @@ def visualize_model_comparison(
     title_a="Model A",
     title_b="Model B",
     num_samples=2,
-    thr=0.5
+    thr=0.5,
+    save_path=None
 ):
-    """
-    두 모델을 같은 이미지에서 비교
-    """
     images, masks = next(iter(dataloader))
     images = images[:num_samples].cuda()
     masks = masks[:num_samples]
@@ -110,57 +101,48 @@ def visualize_model_comparison(
     out_a = model_a(images)
     out_b = model_b(images)
 
-    # 🔧 해상도 맞추기
     if out_a.shape[-2:] != masks.shape[-2:]:
-        out_a = torch.nn.functional.interpolate(
-            out_a, size=masks.shape[-2:], mode="bilinear", align_corners=False
-        )
-        out_b = torch.nn.functional.interpolate(
-            out_b, size=masks.shape[-2:], mode="bilinear", align_corners=False
-        )
+        out_a = torch.nn.functional.interpolate(out_a, masks.shape[-2:])
+        out_b = torch.nn.functional.interpolate(out_b, masks.shape[-2:])
 
-    out_a = torch.sigmoid(out_a) > thr
-    out_b = torch.sigmoid(out_b) > thr
+    out_a = (torch.sigmoid(out_a) > thr).cpu()
+    out_b = (torch.sigmoid(out_b) > thr).cpu()
 
+    fig, axes = plt.subplots(
+        len(class_indices),
+        3,
+        figsize=(12, 4 * len(class_indices))
+    )
 
-    out_a = out_a.cpu()
-    out_b = out_b.cpu()
+    if len(class_indices) == 1:
+        axes = np.expand_dims(axes, 0)
 
-    for i in range(num_samples):
-        fig, axes = plt.subplots(
-            len(class_indices), 3,
-            figsize=(12, 4 * len(class_indices))
-        )
+    for r, cls_idx in enumerate(class_indices):
+        cls_name = CLASSES[cls_idx]
 
-        if len(class_indices) == 1:
-            axes = np.expand_dims(axes, 0)
+        axes[r, 0].imshow(masks[0, cls_idx], cmap="gray")
+        axes[r, 0].set_title(f"GT – {cls_name}")
 
-        for r, cls_idx in enumerate(class_indices):
-            cls_name = CLASSES[cls_idx]
+        axes[r, 1].imshow(out_a[0, cls_idx], cmap="gray")
+        axes[r, 1].set_title(title_a)
 
-            gt = masks[i, cls_idx].numpy()
-            pa = out_a[i, cls_idx].numpy()
-            pb = out_b[i, cls_idx].numpy()
+        axes[r, 2].imshow(out_b[0, cls_idx], cmap="gray")
+        axes[r, 2].set_title(title_b)
 
-            axes[r, 0].imshow(gt, cmap="gray")
-            axes[r, 0].set_title(f"GT – {cls_name}")
+        for c in range(3):
+            axes[r, c].axis("off")
 
-            axes[r, 1].imshow(pa, cmap="gray")
-            axes[r, 1].set_title(title_a)
-
-            axes[r, 2].imshow(pb, cmap="gray")
-            axes[r, 2].set_title(title_b)
-
-            for c in range(3):
-                axes[r, c].axis("off")
-
-        plt.tight_layout()
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=200)
+        plt.close()
+    else:
         plt.show()
 
 
-# =========================
-# 메인 파이프라인
-# =========================
+# ======================================================
+# Analysis entry (experiment / spike)
+# ======================================================
 
 def analyze_spike(
     ckpt_prev,
@@ -170,9 +152,6 @@ def analyze_spike(
     batch_size=2,
     topk=3
 ):
-    """
-    prev → spike → next 비교
-    """
     loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
@@ -189,17 +168,15 @@ def analyze_spike(
     dice_next = compute_classwise_dice(model_next, loader)
 
     cls_indices, score = select_topk_changed_classes(
-    dice_prev, dice_spike, dice_next, k=topk
+        dice_prev, dice_spike, dice_next, k=topk
     )
-
-    delta = dice_spike - dice_prev
 
     print("📈 Spike-dominant classes")
     for idx in cls_indices:
         print(
             f"{CLASSES[idx]:<12} | "
-            f"prev={dice_prev[idx]:.4f} → spike={dice_spike[idx]:.4f} "
-            f"(Δ={delta[idx]:+.4f}, score={score[idx]:.4f})"
+            f"{dice_prev[idx]:.4f} → {dice_spike[idx]:.4f} "
+            f"(score={score[idx]:.4f})"
         )
 
     visualize_model_comparison(
@@ -220,5 +197,56 @@ def analyze_spike(
         title_b="Next"
     )
 
-    del model_prev, model_spike, model_next
-    torch.cuda.empty_cache()
+
+# ======================================================
+# Report entry (paper / presentation)
+# ======================================================
+
+@torch.no_grad()
+def make_report_figures(
+    ckpt,
+    val_dataset,
+    class_indices,
+    save_dir,
+    num_samples=3,
+    thr=0.5
+):
+    os.makedirs(save_dir, exist_ok=True)
+
+    loader = DataLoader(
+        val_dataset,
+        batch_size=num_samples,
+        shuffle=False,
+        num_workers=0
+    )
+
+    model = load_model(ckpt)
+    images, masks = next(iter(loader))
+    images = images.cuda()
+
+    outputs = model(images)
+    outputs = torch.sigmoid(outputs) > thr
+    outputs = outputs.cpu()
+
+    for cls_idx in class_indices:
+        cls_name = CLASSES[cls_idx]
+
+        fig, axes = plt.subplots(num_samples, 3, figsize=(9, 3 * num_samples))
+
+        for i in range(num_samples):
+            axes[i, 0].imshow(masks[i, cls_idx], cmap="gray")
+            axes[i, 0].set_title("GT")
+
+            axes[i, 1].imshow(outputs[i, cls_idx], cmap="gray")
+            axes[i, 1].set_title("Prediction")
+
+            overlay = label2rgb(outputs[i])
+            axes[i, 2].imshow(overlay)
+            axes[i, 2].set_title("Overlay")
+
+            for j in range(3):
+                axes[i, j].axis("off")
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, f"{cls_name}.png"), dpi=200)
+        plt.close()
