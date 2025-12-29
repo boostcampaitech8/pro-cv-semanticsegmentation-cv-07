@@ -11,7 +11,9 @@ import torch.nn.functional as F
 def validation(epoch, model, data_loader, criterion, thr=0.5):
     print(f'Start validation #{epoch:2d}')
     model.eval()
-    model = model.cuda()
+    #model = model.cuda()
+    #이미 cuda에 있으니까?
+    torch.cuda.empty_cache()
 
     dices = []
     with torch.no_grad():
@@ -39,8 +41,12 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
             outputs = (outputs > thr).detach()
             masks = masks.detach()
             
-            dice = dice_coef(outputs, masks)
-            dices.append(dice.cpu())
+            dice = dice_coef(outputs, masks).cpu()
+            dices.append(dice)
+            del images, masks, outputs, dice
+            torch.cuda.empty_cache()
+            #진짜 oom 안뜨게 하려고 별거를 다하네
+            #cpu랑
                 
     dices = torch.cat(dices, 0)
     dices_per_class = torch.mean(dices, 0)
@@ -56,11 +62,14 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     return total_loss / len(data_loader), avg_dice
 
 
-def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,start_epoch):
+def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,start_epoch,early_stopping=None):
     print(f'Start training..')
     
     n_class = len(CLASSES)
     best_dice = 0.
+    
+    acum=4
+    optimizer.zero_grad()
     
     for epoch in range(start_epoch,NUM_EPOCHS):
         train_loss = 0
@@ -74,12 +83,28 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
             outputs = model(images)#['out']
             
             # loss를 계산합니다.
+            # loss = criterion(outputs, masks)
+            # optimizer.zero_grad()
+            # loss.backward()
+            # optimizer.step()
+            
+            # train_loss += loss.item()
+            
+            
+            #gradient accumulation
+            
             loss = criterion(outputs, masks)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            loss = loss/acum
+            loss.backward() #누적?
+            
+            
+            if (step+1)%acum==0:
+                optimizer.step()
+                optimizer.zero_grad()
             
             train_loss += loss.item()
+            
+            
             
             # step 주기에 따라 loss를 출력합니다.
             if (step + 1) % 25 == 0:
@@ -93,12 +118,25 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
         if (epoch + 1) % VAL_EVERY == 0:
             val_loss, dice = validation(epoch + 1, model, val_loader, criterion)
             
+            if early_stopping is not None:
+                early_stopping(val_loss, model, optimizer, epoch)
+            
+                if early_stopping.early_stop:
+                    print("🛑 Early stopping triggered!")
+                    break
+            
             if best_dice < dice:
                 output_path = os.path.join(SAVED_DIR, save_file_name)
                 print(f"Best performance at epoch: {epoch + 1}, {best_dice:.4f} -> {dice:.4f}")
                 print(f"Save model in {output_path}")
                 best_dice = dice
-                torch.save(model, output_path)
+                #torch.save(model, output_path)
+                torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+            },output_path)
+
             
             wandb.log({
                 "train/loss": train_loss / len(data_loader),
