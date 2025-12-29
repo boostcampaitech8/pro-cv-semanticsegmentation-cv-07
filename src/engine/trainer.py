@@ -6,6 +6,8 @@ import torch
 import datetime
 from tqdm.auto import tqdm
 import torch.nn.functional as F
+from torch.cuda.amp import autocast, GradScaler
+
 
 
 def validation(epoch, model, data_loader, criterion, thr=0.5):
@@ -24,8 +26,11 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
         for step, (images, masks) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images, masks = images.cuda(), masks.cuda()         
             
-            outputs = model(images)#['out'] 이거는 unet이 반환하는게 이렇다는데
+            #outputs = model(images)#['out'] 이거는 unet이 반환하는게 이렇다는데
             
+            #이것도 autocast 안에서 AMP를 위해서 
+            with autocast():
+                outputs = model(images)
             output_h, output_w = outputs.size(-2), outputs.size(-1)
             mask_h, mask_w = masks.size(-2), masks.size(-1)
             
@@ -45,7 +50,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
             dices.append(dice)
             del images, masks, outputs, dice
             torch.cuda.empty_cache()
-            #진짜 oom 안뜨게 하려고 별거를 다하네
+            
             #cpu랑
                 
     dices = torch.cat(dices, 0)
@@ -64,11 +69,11 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
 
 def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,start_epoch,early_stopping=None):
     print(f'Start training..')
-    
+    scaler = GradScaler()
     n_class = len(CLASSES)
     best_dice = 0.
     
-    acum=4
+    #acum=4
     optimizer.zero_grad()
     
     for epoch in range(start_epoch,NUM_EPOCHS):
@@ -76,13 +81,14 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
         model.train()
 
         for step, (images, masks) in enumerate(data_loader):            
-            # gpu 연산을 위해 device 할당합니다.
             images, masks = images.cuda(), masks.cuda()
-            model = model.cuda()
+           
+            #autocast 안에서 부르려고
+            #outputs = model(images)#['out']
             
-            outputs = model(images)#['out']
+            # loss 계산 , gradient 업데이트
             
-            # loss를 계산합니다.
+            
             # loss = criterion(outputs, masks)
             # optimizer.zero_grad()
             # loss.backward()
@@ -90,19 +96,30 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
             
             # train_loss += loss.item()
             
-            
+            #AMP 사용
+            optimizer.zero_grad()
+
+            with autocast():
+                outputs = model(images)
+                loss = criterion(outputs, masks)
+
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+
+            train_loss += loss.item()
             #gradient accumulation
             
-            loss = criterion(outputs, masks)
-            loss = loss/acum
-            loss.backward() #누적?
+            # loss = criterion(outputs, masks)
+            # loss = loss/acum
+            # loss.backward() #누적?
             
             
-            if (step+1)%acum==0:
-                optimizer.step()
-                optimizer.zero_grad()
+            # if (step+1)%acum==0:
+            #     optimizer.step()
+            #     optimizer.zero_grad()
             
-            train_loss += loss.item()
+            # train_loss += loss.item()
             
             
             
@@ -117,7 +134,8 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
              
         if (epoch + 1) % VAL_EVERY == 0:
             val_loss, dice = validation(epoch + 1, model, val_loader, criterion)
-            
+            # 클래스별 평균 
+        
             if early_stopping is not None:
                 early_stopping(val_loss, model, optimizer, epoch)
             
@@ -136,7 +154,8 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
             },output_path)
-
+                
+            
             
             wandb.log({
                 "train/loss": train_loss / len(data_loader),
