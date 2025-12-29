@@ -49,6 +49,8 @@ def compute_classwise_dice(model, dataloader, thr=0.5, max_batches=5):
         masks = masks.cuda()
 
         outputs = model(images)
+        if isinstance(outputs, dict):
+            outputs = outputs["seg"]
 
         if outputs.shape[-2:] != masks.shape[-2:]:
             outputs = torch.nn.functional.interpolate(
@@ -100,6 +102,11 @@ def visualize_model_comparison(
 
     out_a = model_a(images)
     out_b = model_b(images)
+
+    if isinstance(out_a, dict):
+        out_a = out_a["seg"]
+    if isinstance(out_b, dict):
+        out_b = out_b["seg"]
 
     if out_a.shape[-2:] != masks.shape[-2:]:
         out_a = torch.nn.functional.interpolate(out_a, masks.shape[-2:])
@@ -225,6 +232,9 @@ def make_report_figures(
     images = images.cuda()
 
     outputs = model(images)
+    if isinstance(outputs, dict):
+        outputs = outputs["seg"]
+
     outputs = torch.sigmoid(outputs) > thr
     outputs = outputs.cpu()
 

@@ -7,6 +7,25 @@ import datetime
 from tqdm.auto import tqdm
 import torch.nn.functional as F
 
+# ===============================
+# Boundary GT 생성 (GPU friendly)
+# ===============================
+def generate_boundary_label(mask, kernel_size=3):
+    """
+    mask: (B, C, H, W)  (multi-class mask)
+    return: (B, 1, H, W) boundary map
+    """
+    # 클래스별 경계를 OR로 합침
+    mask = (mask > 0).float()
+    mask = mask.max(dim=1, keepdim=True)[0]
+
+    padding = kernel_size // 2
+    dilated = F.max_pool2d(mask, kernel_size, stride=1, padding=padding)
+    eroded = -F.max_pool2d(-mask, kernel_size, stride=1, padding=padding)
+
+    boundary = (dilated - eroded).clamp(0, 1)
+    return boundary
+
 
 def validation(epoch, model, data_loader, criterion, thr=0.5):
     print(f'Start validation #{epoch:2d}')
@@ -23,7 +42,10 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
             images, masks = images.cuda(), masks.cuda()         
             
             outputs = model(images)
-            
+
+            if isinstance(outputs, dict):
+                outputs = outputs["seg"]
+                
             output_h, output_w = outputs.size(-2), outputs.size(-1)
             mask_h, mask_w = masks.size(-2), masks.size(-1)
             
@@ -92,7 +114,28 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
             outputs = model(images)
             
             # loss를 계산합니다.
-            loss = criterion(outputs, masks)
+            # ===============================
+            # Boundary-aware training
+            # ===============================
+            if isinstance(outputs, dict):
+                pred_seg = outputs["seg"]
+                pred_boundary = outputs["boundary"]
+
+                # 1️⃣ Segmentation loss
+                loss_seg = criterion(pred_seg, masks)
+
+                # 2️⃣ Boundary GT 생성
+                boundary_gt = generate_boundary_label(masks)
+
+                # 3️⃣ Boundary loss
+                loss_boundary = criterion(pred_boundary, boundary_gt)
+
+                # 4️⃣ Total loss
+                loss = loss_seg + 0.5 * loss_boundary
+
+            else:
+                # Baseline (U-Net++)
+                loss = criterion(outputs, masks)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

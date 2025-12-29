@@ -1,4 +1,5 @@
 import segmentation_models_pytorch as smp
+import torch
 
 
 SMP_MODELS = {
@@ -26,11 +27,13 @@ def build_smp_model(cfg, in_channels=3, classes=29):
     # 🔹 encoder weight 선택
     if cfg.pretrained == "imagenet":
         encoder_weights = "imagenet"
-
-    elif cfg.pretrained == "radimagenet":
-        encoder_weights = None  # 일단 None로 생성
-    else:
+    elif cfg.pretrained == "scratch":
         encoder_weights = None
+    elif cfg.pretrained == "radimagenet":
+        encoder_weights = None
+    else:
+        raise ValueError(f"Unknown pretrained option: {cfg.pretrained}")
+
 
     model = model_cls(
         encoder_name=cfg.encoder_name,
@@ -39,6 +42,14 @@ def build_smp_model(cfg, in_channels=3, classes=29):
         classes=classes,
         activation=None,
         decoder_use_batchnorm=False
+    )
+
+    print(
+        f"[Encoder Init] "
+        f"model={cfg.model_name}, "
+        f"encoder={cfg.encoder_name}, "
+        f"pretrained={cfg.pretrained}, "
+        f"encoder_weights={encoder_weights}"
     )
 
     # 🔹 RADImageNet weight 수동 로딩

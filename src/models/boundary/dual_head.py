@@ -3,7 +3,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import inspect
 import segmentation_models_pytorch as smp
+
+from .decoder_factory import build_unet_decoder
 
 
 class DualHeadBoundaryNet(nn.Module):
@@ -41,11 +44,11 @@ class DualHeadBoundaryNet(nn.Module):
         # -------------------------
         # Segmentation decoder
         # -------------------------
-        self.seg_decoder = smp.decoders.unet.decoder.UnetDecoder(
+        self.seg_decoder = build_unet_decoder(
             encoder_channels=encoder_channels,
             decoder_channels=(256, 128, 64, 32, 16),
             n_blocks=5,
-            use_batchnorm=False,
+            use_bn=False,
             center=False,
         )
 
@@ -58,11 +61,11 @@ class DualHeadBoundaryNet(nn.Module):
         # -------------------------
         # Boundary decoder (lighter)
         # -------------------------
-        self.boundary_decoder = smp.decoders.unet.decoder.UnetDecoder(
+        self.boundary_decoder = build_unet_decoder(
             encoder_channels=encoder_channels,
             decoder_channels=(128, 64, 32, 16, 8),
             n_blocks=5,
-            use_batchnorm=False,
+            use_bn=False,
             center=False,
         )
 
@@ -89,8 +92,8 @@ class DualHeadBoundaryNet(nn.Module):
         # -------------------------
         # Decoders
         # -------------------------
-        seg_feat = self.seg_decoder(*features)
-        bnd_feat = self.boundary_decoder(*features)
+        seg_feat = self.seg_decoder(features)
+        bnd_feat = self.boundary_decoder(features)
 
         seg_logits = self.seg_head(seg_feat)
         boundary_logits = self.boundary_head(bnd_feat)

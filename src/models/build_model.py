@@ -20,36 +20,29 @@ class SegOnlyWrapper(nn.Module):
 
 
 def build_model(cfg):
-    # 1️⃣ Baseline
+    # Baseline
     if cfg.boundary_mode == "none":
         return build_smp_model(cfg)
 
-    # 🔹 encoder weight 선택
-    if cfg.pretrained == "imagenet":
-        encoder_weights = "imagenet"
-    else:
-        encoder_weights = None  # scratch, radimagenet
+    encoder_weights = "imagenet" if cfg.pretrained == "imagenet" else None
 
-    # 2️⃣ Dual-head
     if cfg.boundary_mode == "dual":
-        model = DualHeadBoundaryNet(
+        return DualHeadBoundaryNet(
             encoder_name=cfg.encoder_name,
             encoder_weights=encoder_weights,
         )
 
-    # 3️⃣ BASNet
     elif cfg.boundary_mode == "basnet":
-        model = BASNetLike(
+        return BASNetLike(
             encoder_name=cfg.encoder_name,
             encoder_weights=encoder_weights,
         )
+
     else:
         raise ValueError(f"Unknown boundary_mode: {cfg.boundary_mode}")
 
-    # 🔹 RADImageNet weight는 encoder에 수동 로딩
-    if cfg.pretrained == "radimagenet":
-        rad_ckpt = "/path/to/RadImageNet-ResNet50.pth"
-        state = torch.load(rad_ckpt, map_location="cpu")
-        model.encoder.load_state_dict(state, strict=False)
-
-    return SegOnlyWrapper(model)
+    # # 🔹 RADImageNet weight는 encoder에 수동 로딩
+    # if cfg.pretrained == "radimagenet":
+    #     rad_ckpt = "/path/to/RadImageNet-ResNet50.pth"
+    #     state = torch.load(rad_ckpt, map_location="cpu")
+    #     model.encoder.load_state_dict(state, strict=False)

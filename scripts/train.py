@@ -34,12 +34,14 @@ def main():
             entity=os.getenv("WANDB_ENTITY"),
             name=run_name,   # ✅ save_name 기반
             config={
+                "model": cfg.model_name,
+                "encoder": cfg.encoder_name,
+                "pretrained": cfg.pretrained,
+                "boundary_mode": cfg.boundary_mode,
                 "batch_size": cfg.batch_size,
                 "lr": cfg.lr,
-                "random_seed": cfg.seed,
+                "seed": cfg.seed,
                 "num_epochs": cfg.num_epochs,
-                "val_every": cfg.val_every,
-                "pretrained": cfg.pretrained,
             },
         )
 

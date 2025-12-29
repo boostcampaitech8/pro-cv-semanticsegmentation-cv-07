@@ -7,6 +7,7 @@ import segmentation_models_pytorch as smp
 
 from .blocks import BoundaryConfidenceGate
 from .refinement import BoundaryRefinementModule
+from .decoder_factory import build_unet_decoder
 
 
 class BASNetLike(nn.Module):
@@ -34,21 +35,21 @@ class BASNetLike(nn.Module):
         enc_channels = self.encoder.out_channels
 
         # Semantic decoder
-        self.semantic_decoder = smp.decoders.unet.decoder.UnetDecoder(
+        self.semantic_decoder = build_unet_decoder(
             encoder_channels=enc_channels,
             decoder_channels=(256, 128, 64, 32, 16),
             n_blocks=5,
-            use_batchnorm=False,
+            use_bn=False,
             center=False,
         )
         self.semantic_head = nn.Conv2d(16, num_classes, 1)
 
         # Boundary decoder
-        self.boundary_decoder = smp.decoders.unet.decoder.UnetDecoder(
+        self.boundary_decoder = build_unet_decoder(
             encoder_channels=enc_channels,
             decoder_channels=(128, 64, 32, 16, 8),
             n_blocks=5,
-            use_batchnorm=False,
+            use_bn=False,
             center=False,
         )
         self.boundary_head = nn.Conv2d(8, 1, 1)
@@ -60,8 +61,8 @@ class BASNetLike(nn.Module):
     def forward(self, x):
         feats = self.encoder(x)
 
-        sem_feat = self.semantic_decoder(*feats)
-        bnd_feat = self.boundary_decoder(*feats)
+        sem_feat = self.semantic_decoder(feats)
+        bnd_feat = self.boundary_decoder(feats)
 
         seg_logits = self.semantic_head(sem_feat)
         boundary_logits = self.boundary_head(bnd_feat)

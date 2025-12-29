@@ -28,7 +28,8 @@ def parse_args():
     
     parser.add_argument("--use_wandb", action="store_true", help="use wandb logging")
 
-    parser.add_argument("--pretrained", type=str, default="imagenet", choices=["scratch", "imagenet", "radimagenet"], help="encoder pretrained weights")
+    parser.add_argument("--pretrained", type=str, default="imagenet", choices=["scratch", "imagenet", "radimagenet"], help="encoder pretrained weights"
+)
 
     return parser.parse_args()
 
