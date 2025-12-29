@@ -2,15 +2,11 @@ from dataclasses import dataclass
 
 @dataclass
 class TrainConfig:
+    # ===== 필수 인자 (non-default) =====
     model_name: str
     encoder_name: str
     save_name: str
-    pretrained: bool
-    
-    # 🔹 boundary experiment
-    boundary_mode: str = "none"
-    use_refinement: bool = False
-    use_transformer: bool = False
+    pretrained: str # "scratch" | "imagenet" | "radimagenet"
 
     seed: int
 
@@ -24,3 +20,8 @@ class TrainConfig:
     num_patience: int
 
     use_wandb: bool
+
+    # ===== 선택 인자 (default) =====
+    boundary_mode: str = "none"
+    use_refinement: bool = False
+    use_transformer: bool = False

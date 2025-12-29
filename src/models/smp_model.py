@@ -23,9 +23,16 @@ def build_smp_model(cfg, in_channels=3, classes=29):
         raise ValueError(f"Unknown model_name {cfg.model_name}")
 
     model_cls = SMP_MODELS[model_name]
-    encoder_weights = "imagenet" if cfg.pretrained else None
+    # 🔹 encoder weight 선택
+    if cfg.pretrained == "imagenet":
+        encoder_weights = "imagenet"
 
-    return model_cls(
+    elif cfg.pretrained == "radimagenet":
+        encoder_weights = None  # 일단 None로 생성
+    else:
+        encoder_weights = None
+
+    model = model_cls(
         encoder_name=cfg.encoder_name,
         encoder_weights=encoder_weights,
         in_channels=in_channels,
@@ -33,3 +40,12 @@ def build_smp_model(cfg, in_channels=3, classes=29):
         activation=None,
         decoder_use_batchnorm=False
     )
+
+    # 🔹 RADImageNet weight 수동 로딩
+    if cfg.pretrained == "radimagenet":
+        ckpt_path = "/path/to/RadImageNet-ResNet50.pth"
+        state = torch.load(ckpt_path, map_location="cpu")
+
+        model.encoder.load_state_dict(state, strict=False)
+
+    return model

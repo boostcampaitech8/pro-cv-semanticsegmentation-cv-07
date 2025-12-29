@@ -28,7 +28,7 @@ def parse_args():
     
     parser.add_argument("--use_wandb", action="store_true", help="use wandb logging")
 
-    parser.add_argument("--pretrained", action="store_true", help="use imagenet pretrained encoder")
+    parser.add_argument("--pretrained", type=str, default="imagenet", choices=["scratch", "imagenet", "radimagenet"], help="encoder pretrained weights")
 
     return parser.parse_args()
 
@@ -40,7 +40,7 @@ def build_config(args):
             f"{args.model}_"
             f"{args.encoder}_"
             f"{args.boundary_mode}_"
-            f"{'pre' if args.pretrained else 'scratch'}_"
+            f"{args.pretrained}_"
             f"fold{args.fold}_"
             f"e{args.num_epochs}_best.pt"
         ),
