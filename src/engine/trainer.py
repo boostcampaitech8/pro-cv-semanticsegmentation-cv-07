@@ -131,7 +131,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                 loss_boundary = criterion(pred_boundary, boundary_gt)
 
                 # 4️⃣ Total loss
-                loss = loss_seg + 0.5 * loss_boundary
+                loss = loss_seg + 0.5 * loss_boundary.detach()
 
             else:
                 # Baseline (U-Net++)
@@ -235,6 +235,8 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                     "epoch": epoch + 1,
                 })
         
-        if patience == cfg.num_patience:
-            print(f"early stopping at {epoch + 1}epoch")
-            break
+        # 🔹 Baseline에서만 early stopping 적용
+        if cfg.boundary_mode == "none":
+            if patience == cfg.num_patience:
+                print(f"early stopping at {epoch + 1}epoch")
+                break

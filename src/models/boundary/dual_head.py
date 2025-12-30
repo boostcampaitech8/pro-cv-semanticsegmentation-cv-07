@@ -78,10 +78,7 @@ class DualHeadBoundaryNet(nn.Module):
         # -------------------------
         # Boundary → Segmentation injection
         # -------------------------
-        self.refine_conv = nn.Sequential(
-            nn.Conv2d(num_classes + 1, num_classes, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-        )
+        self.refine_conv = nn.Conv2d(num_classes + 1, num_classes, kernel_size=3, padding=1)
 
     def forward(self, x):
         # -------------------------
@@ -111,8 +108,8 @@ class DualHeadBoundaryNet(nn.Module):
                 align_corners=False,
             )
 
-        fused = torch.cat([seg_logits, boundary_prob], dim=1)
-        refined_seg = self.refine_conv(fused)
+        fused = torch.cat([seg_logits, 0.1 * boundary_prob], dim=1)
+        refined_seg = seg_logits + self.refine_conv(fused)   # residual
 
         return {
             "seg": refined_seg,
