@@ -73,7 +73,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
     n_class = len(CLASSES)
     best_dice = 0.
     
-    #acum=4
+    acum=2
     optimizer.zero_grad()
     
     for epoch in range(start_epoch,NUM_EPOCHS):
@@ -97,29 +97,33 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
             # train_loss += loss.item()
             
             #AMP 사용
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
 
+            # with autocast():
+            #     outputs = model(images)
+            #     loss = criterion(outputs, masks)
+
+            # scaler.scale(loss).backward()
+            # scaler.step(optimizer)
+            # scaler.update()
+
+            # train_loss += loss.item()
+            #gradient accumulation AMP 적용.
             with autocast():
                 outputs = model(images)
                 loss = criterion(outputs, masks)
+                loss = loss / acum         
 
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            scaler.scale(loss).backward()   
+
+            if (step + 1) % acum == 0:
+                scaler.step(optimizer)      #
+                scaler.update()
+                optimizer.zero_grad()
 
             train_loss += loss.item()
-            #gradient accumulation
+                    
             
-            # loss = criterion(outputs, masks)
-            # loss = loss/acum
-            # loss.backward() #누적?
-            
-            
-            # if (step+1)%acum==0:
-            #     optimizer.step()
-            #     optimizer.zero_grad()
-            
-            # train_loss += loss.item()
             
             
             
@@ -134,10 +138,11 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
              
         if (epoch + 1) % VAL_EVERY == 0:
             val_loss, dice = validation(epoch + 1, model, val_loader, criterion)
-            # 클래스별 평균 
+            
         
             if early_stopping is not None:
-                early_stopping(val_loss, model, optimizer, epoch)
+                early_stopping(dice, model, optimizer, epoch)
+                #코딩 잘못해서 dice 버전으로 early_stopping을 걸었는데 값을 val_loss 주고 있었음. dice로 수정
             
                 if early_stopping.early_stop:
                     print("🛑 Early stopping triggered!")
