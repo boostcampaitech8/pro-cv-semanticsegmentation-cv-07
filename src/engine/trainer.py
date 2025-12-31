@@ -108,7 +108,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
             # scaler.update()
 
             # train_loss += loss.item()
-            #gradient accumulation AMP 적용.
+            #gradient accumulation와 AMP 적용.
             with autocast():
                 outputs = model(images)
                 loss = criterion(outputs, masks)
