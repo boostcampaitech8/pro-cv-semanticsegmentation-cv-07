@@ -101,7 +101,7 @@ class XRayDataset(Dataset):
         is_train=True, 
         folds_json=None, 
         fold=0,
-        img_size=512,use_rotate=False,use_scale=False,use_hflip=False
+        img_size=512,use_rotate=False,use_scale=False,use_hflip=False,use_contrast=False
     ):
         self.image_root = image_root
         self.label_root = label_root
@@ -110,7 +110,7 @@ class XRayDataset(Dataset):
         # EXCLUDE_IDS = ["487", "363"]
         
        
-        self.transforms = get_train_transform(img_size,use_rotate,use_scale,use_hflip) if is_train else get_valid_transform(img_size)
+        self.transforms = get_train_transform(img_size,use_rotate=use_rotate,use_scale=use_scale,use_hflip=use_hflip,use_contrast=use_contrast) if is_train else get_valid_transform(img_size)
         
 
         pngs = sorted([

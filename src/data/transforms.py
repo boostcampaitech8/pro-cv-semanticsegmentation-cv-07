@@ -15,8 +15,18 @@ def get_train_transform(
     hflip_p=0.4,  
 
     fixed_shift_y=0.15,
+    use_contrast=False
 ):
     t = [A.Resize(img_size, img_size)]
+    
+    if use_contrast:
+        t.append(
+            A.RandomBrightnessContrast(
+            brightness_limit=0.0,
+            contrast_limit=(0.1, 0.3),
+            p=0.5
+        ),
+        )
 
     # Scale (rotate 여부와 무관)
     if use_scale:
