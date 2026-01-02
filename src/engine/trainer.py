@@ -13,58 +13,39 @@ from torch.cuda.amp import autocast, GradScaler
 def validation(epoch, model, data_loader, criterion, thr=0.5):
     print(f'Start validation #{epoch:2d}')
     model.eval()
-    #model = model.cuda()
-    #이미 cuda에 있으니까?
-    torch.cuda.empty_cache()
 
     dices = []
-    with torch.no_grad():
-        n_class = len(CLASSES)
-        total_loss = 0
-        cnt = 0
+    total_loss = 0
+    cnt = 0
 
-        for step, (images, masks) in tqdm(enumerate(data_loader), total=len(data_loader)):
-            images, masks = images.cuda(), masks.cuda()         
-            
-            #outputs = model(images)#['out'] 이거는 unet이 반환하는게 이렇다는데
-            
-            #이것도 autocast 안에서 AMP를 위해서 
+    with torch.no_grad():
+        for images, masks in tqdm(data_loader):
+            images, masks = images.cuda(), masks.cuda()
+
             with autocast():
                 outputs = model(images)
-            output_h, output_w = outputs.size(-2), outputs.size(-1)
-            mask_h, mask_w = masks.size(-2), masks.size(-1)
-            
-            # gt와 prediction의 크기가 다른 경우 prediction을 gt에 맞춰 interpolation 합니다.
-            if output_h != mask_h or output_w != mask_w:
-                outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
-            
-            loss = criterion(outputs, masks)
+
+                if outputs.shape[-2:] != masks.shape[-2:]:
+                    outputs = F.interpolate(outputs, size=masks.shape[-2:], mode="bilinear")
+
+                loss = criterion(outputs, masks)
+
             total_loss += loss.item()
             cnt += 1
-            
-            outputs = torch.sigmoid(outputs)
-            outputs = (outputs > thr).detach()
-            masks = masks.detach()
-            
-            dice = dice_coef(outputs, masks).cpu()
+
+            probs = torch.sigmoid(outputs)
+            preds = (probs > thr)
+
+            dice = dice_coef(preds, masks).cpu()
             dices.append(dice)
-            del images, masks, outputs, dice
-            torch.cuda.empty_cache()
-            
-            #cpu랑
-                
+
     dices = torch.cat(dices, 0)
-    dices_per_class = torch.mean(dices, 0)
-    dice_str = [
-        f"{c:<12}: {d.item():.4f}"
-        for c, d in zip(CLASSES, dices_per_class)
-    ]
-    dice_str = "\n".join(dice_str)
-    print(dice_str)
-    
-    avg_dice = torch.mean(dices_per_class).item()
-    
-    return total_loss / len(data_loader), avg_dice
+    dices_per_class = dices.mean(0)
+
+    avg_dice = dices_per_class.mean().item()
+    avg_loss = total_loss / cnt
+
+    return avg_loss, avg_dice
 
 
 def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,start_epoch,early_stopping=None):
@@ -121,8 +102,13 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
                 scaler.update()
                 optimizer.zero_grad()
 
-            train_loss += loss.item()
-                    
+            train_loss += loss.item()*acum
+            #train loss는 봐야하니까 로그용
+        if (step + 1) % acum != 0:
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad()
+        #그리고 이거 step 다 돌렸을 떄 남는게 있을 수도 있잖아  
             
             
             
@@ -153,12 +139,13 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
                 print(f"Best performance at epoch: {epoch + 1}, {best_dice:.4f} -> {dice:.4f}")
                 print(f"Save model in {output_path}")
                 best_dice = dice
+                best_epoch=epoch
                 #torch.save(model, output_path)
-                torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-            },output_path)
+            #     torch.save({
+            #     'epoch': epoch,
+            #     'model_state_dict': model.state_dict(),
+            #     'optimizer_state_dict': optimizer.state_dict(),
+            # },output_path)
                 
             
             
@@ -167,9 +154,11 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
                 "val/loss": val_loss,
                 "val/DICE": dice,
                 "epoch": epoch + 1,
+                "val/best_DICE": best_dice,  
+                "best epoch": best_epoch
             })
         else:
             wandb.log({
                 "train/loss": train_loss / len(data_loader),
-                "epoch": epoch + 1,
+                "epoch": epoch + 1
             })
