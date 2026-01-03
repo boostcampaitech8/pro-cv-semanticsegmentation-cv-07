@@ -240,3 +240,8 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
             if patience == cfg.num_patience:
                 print(f"early stopping at {epoch + 1}epoch")
                 break
+        elif cfg.boundary_mode == "basnet":
+            # basnet: 60epoch 이후부터 early stopping 활성화
+            if (epoch + 1) >= 60 and patience == cfg.num_patience:
+                print(f"[BASNet] early stopping at {epoch + 1}epoch (post-60)")
+                break

@@ -36,6 +36,8 @@ def build_model(cfg):
         return BASNetLike(
             encoder_name=cfg.encoder_name,
             encoder_weights=encoder_weights,
+            use_refinement=cfg.use_refinement,
+            use_transformer=cfg.use_transformer,
         )
 
     else:

@@ -13,7 +13,7 @@ class XRayDataset(Dataset):
         self.transforms = get_train_transform() if is_train else get_valid_transform()
 
         # 1) split json 로드
-        split_path = "src/datasets/splits/splits_5fold_subject.json"
+        split_path = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/splits/splits_5fold_subject.json"
         with open(split_path) as f:
             splits = json.load(f)
 

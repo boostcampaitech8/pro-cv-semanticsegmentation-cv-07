@@ -33,14 +33,23 @@ def parse_args():
 
     return parser.parse_args()
 
+def _flag_name(args):
+    flags = []
+    if args.use_refinement:
+        flags.append("ref")
+    if args.use_transformer:
+        flags.append("trans")
+    return "+".join(flags) if flags else "base"
+
 def build_config(args):
+    flag = _flag_name(args)
     return TrainConfig(
         model_name=args.model,
         encoder_name=args.encoder,
         save_name = (
             f"{args.model}_"
             f"{args.encoder}_"
-            f"{args.boundary_mode}_"
+            f"{args.boundary_mode}_{flag}_"
             f"{args.pretrained}_"
             f"fold{args.fold}_"
             f"e{args.num_epochs}_best.pt"
