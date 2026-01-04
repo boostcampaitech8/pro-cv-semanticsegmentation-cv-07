@@ -30,12 +30,15 @@ class BoundaryMediatorTransformer(nn.Module):
         Bd, Cd, Hd, Wd = feat_ds.shape  # Hd*Wd ≈ 4096
 
         boundary_prob = torch.sigmoid(boundary_ds).view(B, 1, -1)
+        boundary_prob = boundary_prob.clamp(0.1, 0.9)
 
         x = feat_ds.view(B, C, -1).permute(0, 2, 1)  # (B, 4096, C)
 
         attn_out, _ = self.attn(x, x, x)
 
-        attn_out = attn_out * boundary_prob.transpose(1, 2)
+        alpha = 0.5
+        gate = 1.0 + alpha * boundary_prob.transpose(1, 2)
+        attn_out = attn_out * gate
 
         out = self.norm(x + attn_out)
         out = out.permute(0, 2, 1).view(B, C, Hd, Wd)
