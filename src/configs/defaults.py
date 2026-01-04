@@ -21,6 +21,14 @@ PALETTE = [
     (110, 76, 0), (174, 57, 255), (199, 100, 0), (72, 0, 118), (255, 179, 240),
     (0, 125, 92), (209, 0, 151), (188, 208, 182), (0, 220, 176),
 ]
+EXCLUDE_IMAGE_DIRS = {
+    os.path.normpath("ID363"),
+    os.path.normpath("ID487"),
+}
+EXCLUDE_LABEL_DIRS = {
+    os.path.normpath("../outputs_json/ID363"),
+    os.path.normpath("../outputs_json/ID487"),
+}
 
 
 # 훈련 하이퍼 파라미터 기본 값 설정
