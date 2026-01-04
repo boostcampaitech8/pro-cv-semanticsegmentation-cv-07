@@ -4,9 +4,9 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from src.configs.defaults import IMAGE_ROOT, LABEL_ROOT, CLASSES, CLASS2IND
+from src.configs.defaults import IMAGE_ROOT, LABEL_ROOT, CLASSES, CLASS2IND, EXCLUDE_IMAGE_DIRS, EXCLUDE_LABEL_DIRS
 from src.data.transforms import get_train_transform, get_valid_transform
-from src.data.utils import split_train_val
+from src.data.utils import split_train_val, is_excluded
 
 class XRayDataset(Dataset):
     def __init__(self, is_train=True):
@@ -15,12 +15,14 @@ class XRayDataset(Dataset):
         pngs = {
             os.path.relpath(os.path.join(root, fname), start=IMAGE_ROOT)
             for root, _dirs, files in os.walk(IMAGE_ROOT)
+            if not is_excluded(root, IMAGE_ROOT, EXCLUDE_IMAGE_DIRS)
             for fname in files
             if os.path.splitext(fname)[1].lower() == ".png"
         }
         jsons = {
             os.path.relpath(os.path.join(root, fname), start=LABEL_ROOT)
             for root, _dirs, files in os.walk(LABEL_ROOT)
+            if not is_excluded(root, IMAGE_ROOT, EXCLUDE_LABEL_DIRS)
             for fname in files
             if os.path.splitext(fname)[1].lower() == ".json"
         }

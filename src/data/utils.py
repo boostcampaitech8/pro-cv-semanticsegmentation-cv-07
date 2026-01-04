@@ -51,3 +51,11 @@ def decode_rle_to_mask(rle, height, width):
         img[lo:hi] = 1
     
     return img.reshape(height, width)
+
+
+def is_excluded(root, base_dir, exclude_dirs):
+    rel = os.path.normpath(os.path.relpath(root, base_dir))
+    return any(
+        rel == d or rel.startswith(d + os.sep)
+        for d in exclude_dirs
+    )
