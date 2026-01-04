@@ -86,8 +86,16 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
 
 def train(model, data_loader, val_loader, criterion, optimizer, cfg):
     print(f'Start training..')
+
+    # ===============================
+    # Experiment-specific directory
+    # ===============================
+    exp_name = cfg.save_name.replace("_best.pt", "")
+    EXP_DIR = os.path.join(SAVED_DIR, exp_name)
+    os.makedirs(EXP_DIR, exist_ok=True)
+
     
-    SPIKE_META_PATH = os.path.join(SAVED_DIR, "spike_meta.txt")
+    SPIKE_META_PATH = os.path.join(EXP_DIR, "spike_meta.txt")
 
     # 🔹 새 실험 시작 시 spike meta 초기화
     if os.path.exists(SPIKE_META_PATH):
@@ -179,7 +187,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                 if abs_delta >= SPIKE_SAVE_TH:
                     direction = "up" if delta > 0 else "down"
                     spike_name = f"spike_{direction}_e{epoch+1}_d{dice:.4f}.pt"
-                    torch.save(model, os.path.join(SAVED_DIR, spike_name))
+                    torch.save(model, os.path.join(EXP_DIR, spike_name))
                     print(f"[SPIKE-SAVE] {direction.upper()} ΔDice={delta:+.4f}")
                     
                     with open(SPIKE_META_PATH, "a") as f:
@@ -203,7 +211,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                             })
             
             if best_dice < dice:
-                output_path = os.path.join(SAVED_DIR, cfg.save_name)
+                output_path = os.path.join(EXP_DIR, cfg.save_name)
                 print(f"Best performance at epoch: {epoch + 1}, {best_dice:.4f} -> {dice:.4f}")
                 print(f"Save model in {output_path}")
                 best_dice = dice

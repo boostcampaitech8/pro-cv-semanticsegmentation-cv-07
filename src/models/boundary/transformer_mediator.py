@@ -21,23 +21,26 @@ class BoundaryMediatorTransformer(nn.Module):
         self.norm = nn.LayerNorm(dim)
 
     def forward(self, feat, boundary_logits):
-        """
-        feat: (B, C, H, W)
-        boundary_logits: (B, 1, H, W)
-        """
         B, C, H, W = feat.shape
 
-        boundary_prob = torch.sigmoid(boundary_logits)
-        boundary_prob = boundary_prob.view(B, 1, -1)
+        # 🔻 spatial downsample (ex: 8x)
+        feat_ds = F.avg_pool2d(feat, kernel_size=16, stride=16)
+        boundary_ds = F.avg_pool2d(boundary_logits, kernel_size=16, stride=16)
 
-        x = feat.view(B, C, -1).permute(0, 2, 1)  # (B, HW, C)
+        Bd, Cd, Hd, Wd = feat_ds.shape  # Hd*Wd ≈ 4096
+
+        boundary_prob = torch.sigmoid(boundary_ds).view(B, 1, -1)
+
+        x = feat_ds.view(B, C, -1).permute(0, 2, 1)  # (B, 4096, C)
 
         attn_out, _ = self.attn(x, x, x)
 
-        # Boundary confidence gating
         attn_out = attn_out * boundary_prob.transpose(1, 2)
 
         out = self.norm(x + attn_out)
-        out = out.permute(0, 2, 1).view(B, C, H, W)
+        out = out.permute(0, 2, 1).view(B, C, Hd, Wd)
+
+        # 🔺 upsample back
+        out = F.interpolate(out, size=(H, W), mode="bilinear", align_corners=False)
 
         return out
