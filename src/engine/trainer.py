@@ -131,7 +131,11 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                 loss_boundary = criterion(pred_boundary, boundary_gt)
 
                 # 4️⃣ Total loss
-                loss = loss_seg + 0.05 * loss_boundary.detach()
+                if cfg.boundary_detach:
+                    loss = loss_seg + 0.05 * loss_boundary.detach()
+                else:
+                    loss = loss_seg + 0.05 * loss_boundary
+
 
             else:
                 # Baseline (U-Net++)

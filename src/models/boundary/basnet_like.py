@@ -75,18 +75,19 @@ class BASNetLike(nn.Module):
         sem_feat = self.semantic_decoder(feats)
         bnd_feat = self.boundary_decoder(feats)
 
-        seg_logits = self.semantic_head(sem_feat)
         boundary_logits = self.boundary_head(bnd_feat)
 
-        # 1️⃣ Transformer mediator (기본 OFF)
+        # 1️⃣ Transformer는 feature 공간에서
         if self.use_transformer:
-            seg_logits = self.mediator(seg_logits, boundary_logits)
+            sem_feat = self.mediator(sem_feat, boundary_logits)
 
-        # 2️⃣ Post-decoder refinement (기본 ON)
+        seg_logits = self.semantic_head(sem_feat)
+
+        # 2️⃣ Refinement는 logits에서
         if self.use_refinement:
             seg_logits = self.boundary_refine(seg_logits, boundary_logits)
 
         return {
             "seg": seg_logits,
             "boundary": boundary_logits,
-        }
+}

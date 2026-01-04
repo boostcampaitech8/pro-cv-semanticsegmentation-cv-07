@@ -25,3 +25,4 @@ class TrainConfig:
     boundary_mode: str = "none"
     use_refinement: bool = False
     use_transformer: bool = False
+    boundary_detach: bool = True

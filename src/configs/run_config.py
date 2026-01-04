@@ -28,8 +28,9 @@ def parse_args():
     
     parser.add_argument("--use_wandb", action="store_true", help="use wandb logging")
 
-    parser.add_argument("--pretrained", type=str, default="imagenet", choices=["scratch", "imagenet", "radimagenet"], help="encoder pretrained weights"
-)
+    parser.add_argument("--pretrained", type=str, default="imagenet", choices=["scratch", "imagenet", "radimagenet"], help="encoder pretrained weights")
+
+    parser.add_argument("--boundary_detach", action="store_true", help="detach boundary loss gradient")
 
     return parser.parse_args()
 
@@ -60,6 +61,7 @@ def build_config(args):
         boundary_mode=args.boundary_mode,
         use_refinement=args.use_refinement,
         use_transformer=args.use_transformer,
+        boundary_detach=args.boundary_detach,
 
         batch_size=args.batch_size,
         num_workers_train=NUM_WORKERS_TRAIN,
