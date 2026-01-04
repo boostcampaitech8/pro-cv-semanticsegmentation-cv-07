@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-
+from src.losses.combined_loss import CombinedLoss
 
 def main():
     args = parse_args()
@@ -75,10 +75,11 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     
-    criterion = nn.BCEWithLogitsLoss() 
+    seg_criterion = CombinedLoss(mode=cfg.loss_mode)
+    boundary_criterion = CombinedLoss(mode="bce")  # ← 고정
     optimizer = optim.Adam(params=model.parameters(), lr=cfg.lr, weight_decay=1e-6)
 
-    train(model, train_loader, valid_loader, criterion, optimizer, cfg)
+    train(model, train_loader, valid_loader, seg_criterion, boundary_criterion, optimizer, cfg)
 
 
 if __name__ == '__main__':

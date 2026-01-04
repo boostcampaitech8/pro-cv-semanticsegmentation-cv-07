@@ -30,7 +30,10 @@ def parse_args():
 
     parser.add_argument("--pretrained", type=str, default="imagenet", choices=["scratch", "imagenet", "radimagenet"], help="encoder pretrained weights")
 
-    parser.add_argument("--boundary_detach", action="store_true", help="detach boundary loss gradient")
+    parser.add_argument("--no_boundary_detach", action="store_false", dest="boundary_detach", help="turn OFF boundary loss detaching (default: ON)")
+    parser.set_defaults(boundary_detach=True)
+
+    parser.add_argument("--loss_mode", type=str, default="bce", choices=["bce", "bce_dice", "bce_dice_jaccard"],)
 
     return parser.parse_args()
 
@@ -51,6 +54,7 @@ def build_config(args):
             f"{args.model}_"
             f"{args.encoder}_"
             f"{args.boundary_mode}_{flag}_"
+            f"{args.loss_mode}_"
             f"{args.pretrained}_"
             f"fold{args.fold}_"
             f"e{args.num_epochs}_best.pt"
@@ -62,6 +66,7 @@ def build_config(args):
         use_refinement=args.use_refinement,
         use_transformer=args.use_transformer,
         boundary_detach=args.boundary_detach,
+        loss_mode=args.loss_mode,
 
         batch_size=args.batch_size,
         num_workers_train=NUM_WORKERS_TRAIN,

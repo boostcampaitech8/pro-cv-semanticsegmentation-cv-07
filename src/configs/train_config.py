@@ -26,3 +26,5 @@ class TrainConfig:
     use_refinement: bool = False
     use_transformer: bool = False
     boundary_detach: bool = True
+
+    loss_mode: str = "bce"  # "bce" | "bce_dice" | "bce_dice_jaccard"

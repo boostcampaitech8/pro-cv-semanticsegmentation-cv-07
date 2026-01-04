@@ -84,7 +84,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     return total_loss / len(data_loader), avg_dice, dice_class_dict, dices_per_class
 
 
-def train(model, data_loader, val_loader, criterion, optimizer, cfg):
+def train(model, data_loader, val_loader, seg_criterion, boundary_criterion, optimizer, cfg):
     print(f'Start training..')
 
     # ===============================
@@ -130,13 +130,13 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                 pred_boundary = outputs["boundary"]
 
                 # 1️⃣ Segmentation loss
-                loss_seg = criterion(pred_seg, masks)
+                loss_seg = seg_criterion(pred_seg, masks)
 
                 # 2️⃣ Boundary GT 생성
                 boundary_gt = generate_boundary_label(masks)
 
                 # 3️⃣ Boundary loss
-                loss_boundary = criterion(pred_boundary, boundary_gt)
+                loss_boundary = boundary_criterion(pred_boundary, boundary_gt)
 
                 # 4️⃣ Total loss
                 if cfg.boundary_detach:
@@ -147,7 +147,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
 
             else:
                 # Baseline (U-Net++)
-                loss = criterion(outputs, masks)
+                loss = seg_criterion(outputs, masks)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -164,7 +164,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                 )
              
         if (epoch + 1) % cfg.val_every == 0:
-            val_loss, dice, dice_class_dict, class_dice = validation(epoch + 1, model, val_loader, criterion)
+            val_loss, dice, dice_class_dict, class_dice = validation(epoch + 1, model, val_loader, seg_criterion)
             # ===== [ADD] dice 변화량 계산 (validation 직후) =====
             delta = None
             abs_delta = None
