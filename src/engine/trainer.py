@@ -6,6 +6,7 @@ import torch
 import datetime
 from tqdm.auto import tqdm
 import torch.nn.functional as F
+from torch.cuda.amp import autocast, GradScaler
 
 
 def validation(epoch, model, data_loader, criterion, thr=0.5):
@@ -22,24 +23,31 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
         for step, (images, masks) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images, masks = images.cuda(), masks.cuda()         
             
-            outputs = model(images)
+            if images.shape[-2:] != (2048, 2048):
+                outputs = model(images)
             
-            output_h, output_w = outputs.size(-2), outputs.size(-1)
-            mask_h, mask_w = masks.size(-2), masks.size(-1)
+                output_h, output_w = outputs.size(-2), outputs.size(-1)
+                mask_h, mask_w = masks.size(-2), masks.size(-1)
             
-            # gt와 prediction의 크기가 다른 경우 prediction을 gt에 맞춰 interpolation 합니다.
-            if output_h != mask_h or output_w != mask_w:
-                outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
+                # gt와 prediction의 크기가 다른 경우 prediction을 gt에 맞춰 interpolation 합니다.
+                if output_h != mask_h or output_w != mask_w:
+                    outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
             
-            loss = criterion(outputs, masks)
+                loss = criterion(outputs, masks)
+            else:
+                with autocast():
+                    outputs = model(images)
+                    loss = criterion(outputs, masks)
+            
             total_loss += loss.item()
             cnt += 1
             
             outputs = torch.sigmoid(outputs)
-            outputs = (outputs > thr).detach().cpu()
-            masks = masks.detach().cpu()
+            outputs = (outputs > thr).float()
+            # outputs = (outputs > thr).detach().cpu()
+            # masks = masks.detach().cpu()
             
-            dice = dice_coef(outputs, masks)
+            dice = dice_coef(masks, outputs)
             dices.append(dice)
                 
     dices = torch.cat(dices, 0)
@@ -51,16 +59,18 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     dice_str = "\n".join(dice_str)
     print(dice_str)
     
-    avg_dice = torch.mean(dices_per_class).item()
+    avg_dice = dices_per_class.mean().item()
+    # avg_dice = torch.mean(dices_per_class).item()
     
     return total_loss / len(data_loader), avg_dice
 
 
-def train(model, data_loader, val_loader, criterion, optimizer, cfg):
+def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
     print(f'Start training..')
     
     model = model.cuda()
-    n_class = len(CLASSES)
+    scaler = GradScaler()
+
     best_dice = 0.
     patience = 0
     
@@ -72,13 +82,22 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
             # gpu 연산을 위해 device 할당합니다.
             images, masks = images.cuda(), masks.cuda()
             
-            outputs = model(images)
-            
-            # loss를 계산합니다.
-            loss = criterion(outputs, masks)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            if images.shape[-2:] != (2048, 2048):
+                outputs = model(images)
+                loss = criterion(outputs, masks)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+            else:
+                optimizer.zero_grad()
+
+                with autocast():
+                    outputs = model(images)
+                    loss = criterion(outputs, masks)
+
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
             
             train_loss += loss.item()
             
