@@ -43,9 +43,9 @@ def main():
 
         wandb.config.update({"monitor_memory": True})
     
-    train_dataset = XRayDataset(is_train=True)
-    valid_dataset = XRayDataset(is_train=False)
-
+    train_dataset = XRayDataset(is_train=True, split_file="/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/splits/fold_0_train.txt")
+    valid_dataset = XRayDataset(is_train=False, split_file="/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/splits/fold_0_val.txt")
+    
     train_loader = DataLoader(
         dataset=train_dataset, 
         batch_size=cfg.batch_size,
