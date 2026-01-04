@@ -4,12 +4,13 @@ from src.data.train_data import XRayDataset
 from src.utils.set_seed import set_seed
 from src.engine.trainer import train
 from src.models.smp_model import build_smp_model
+from src.losses.loss_builder import build_loss
+from src.models.scheduler import build_scheduler
+from src.models.optimizer import get_optimizer
 import os
 import wandb
 from dotenv import load_dotenv
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import DataLoader
 
 
@@ -30,7 +31,7 @@ def main():
         wandb.init(
             project=os.getenv("WANDB_PROJECT"),
             entity=os.getenv("WANDB_ENTITY"),
-            name=f"{cfg.model_name}({cfg.encoder_name})",
+            name=f"{cfg.model_name}_2048_flip",
             config={
                 "batch_size": cfg.batch_size,
                 "lr": cfg.lr,
@@ -67,10 +68,11 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     
-    criterion = nn.BCEWithLogitsLoss() 
-    optimizer = optim.Adam(params=model.parameters(), lr=cfg.lr, weight_decay=1e-6)
+    criterion = build_loss(cfg)
+    optimizer = get_optimizer(cfg, model)
+    scheduler = build_scheduler(cfg, optimizer)
 
-    train(model, train_loader, valid_loader, criterion, optimizer, cfg)
+    train(model, train_loader, valid_loader, criterion, optimizer, scheduler, cfg)
 
 
 if __name__ == '__main__':

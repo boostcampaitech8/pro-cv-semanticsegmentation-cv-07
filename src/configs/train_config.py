@@ -5,6 +5,9 @@ class TrainConfig:
     model_name: str
     encoder_name: str
     save_name: str
+    loss_type: str
+    scheduler: str
+    optimizer: str
     
     seed: int
 

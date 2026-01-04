@@ -8,7 +8,10 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model", type=str, default='upernet')
-    parser.add_argument("--encoder", type=str)
+    parser.add_argument("--encoder", type=str, default='resnext50_32x4d')
+    parser.add_argument("--loss", type=str, default='BDJ')
+    parser.add_argument("--scheduler", type=str, default="warmup")
+    parser.add_argument("--optim", type=str, default="adam")
     
     parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
     
@@ -25,7 +28,10 @@ def build_config(args):
     return TrainConfig(
         model_name=args.model,
         encoder_name=args.encoder,
-        save_name=f"{args.model}_{args.encoder}_best.pt",
+        loss_type=args.loss,
+        scheduler=args.scheduler,
+        optimizer=args.optim,
+        save_name=f"{args.model}_2048_flip_best.pt",
 
         batch_size=args.batch_size,
         num_workers_train=NUM_WORKERS_TRAIN,

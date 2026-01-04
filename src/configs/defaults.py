@@ -1,3 +1,6 @@
+import os
+
+
 # 전역변수 설정
 IMAGE_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/train/DCM"
 TEST_IMAGE_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/test/DCM"
@@ -36,9 +39,9 @@ RANDOM_SEED = 21
 
 BATCH_SIZE = 8
 NUM_WORKERS_TRAIN = 4
-NUM_WORKERS_VAL = 0
+NUM_WORKERS_VAL = 2
 
 LR = 1e-4
 NUM_EPOCHS = 90
-VAL_EVERY = 3
-NUM_PATIENCE = 5
+VAL_EVERY = 1
+NUM_PATIENCE = 10

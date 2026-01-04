@@ -94,6 +94,12 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
         if (epoch + 1) % cfg.val_every == 0:
             val_loss, dice = validation(epoch + 1, model, val_loader, criterion)
             
+            if scheduler is not None:
+                if cfg.scheduler == "reduce":
+                    scheduler.step(dice)
+                else:
+                    scheduler.step()
+            
             if best_dice < dice:
                 output_path = os.path.join(SAVED_DIR, cfg.save_name)
                 print(f"Best performance at epoch: {epoch + 1}, {best_dice:.4f} -> {dice:.4f}")
@@ -109,12 +115,17 @@ def train(model, data_loader, val_loader, criterion, optimizer, cfg):
                     "train/loss": train_loss / len(data_loader),
                     "val/loss": val_loss,
                     "val/DICE": dice,
+                    "lr": optimizer.param_groups[0]["lr"],
                     "epoch": epoch + 1,
                 })
         else:
+            if scheduler is not None and cfg.scheduler != "reduce":
+                scheduler.step()
+            
             if cfg.use_wandb:
                 wandb.log({
                     "train/loss": train_loss / len(data_loader),
+                    "lr": optimizer.param_groups[0]["lr"],
                     "epoch": epoch + 1,
                 })
         
