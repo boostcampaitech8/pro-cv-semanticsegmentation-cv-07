@@ -21,3 +21,4 @@ class TrainConfig:
     num_patience: int
 
     use_wandb: bool
+    total:bool

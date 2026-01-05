@@ -9,7 +9,7 @@ from src.data.transforms import get_train_transform, get_valid_transform
 from src.data.utils import split_train_val, is_excluded
 
 class XRayDataset(Dataset):
-    def __init__(self, is_train=True, split_file=None):
+    def __init__(self, is_train=True, split_file=None, total=False):
         
         # 이미지 및 라벨 불러오기
         pngs = {
@@ -56,7 +56,10 @@ class XRayDataset(Dataset):
         _filenames = np.array(pngs)
         _labelnames = np.array(jsons)
         
-        filenames, labelnames = split_train_val(_filenames, _labelnames, n_splits=5, is_train=is_train)
+        if total:
+            filenames, labelnames = _filenames, _labelnames
+        else: 
+            filenames, labelnames = split_train_val(_filenames, _labelnames, n_splits=5, is_train=is_train)
         
         self.filenames = filenames
         self.labelnames = labelnames

@@ -31,7 +31,7 @@ def main():
         wandb.init(
             project=os.getenv("WANDB_PROJECT"),
             entity=os.getenv("WANDB_ENTITY"),
-            name=f"{cfg.model_name}_2048_flip",
+            name=f"{cfg.model_name}_2048_total",
             config={
                 "batch_size": cfg.batch_size,
                 "lr": cfg.lr,
@@ -44,25 +44,39 @@ def main():
 
         wandb.config.update({"monitor_memory": True})
     
-    train_dataset = XRayDataset(is_train=True, split_file="/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/splits/fold_0_train.txt")
-    valid_dataset = XRayDataset(is_train=False, split_file="/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/splits/fold_0_val.txt")
+    if cfg.total:
+        train_dataset = XRayDataset(is_train=True, total=True)
+        print(f"전체 데이터 로드 확인: {len(train_dataset)}")
+        
+        train_loader = DataLoader(
+            dataset=train_dataset, 
+            batch_size=cfg.batch_size,
+            shuffle=True,
+            num_workers=cfg.num_workers_train,
+            drop_last=True,
+        )
+        valid_loader = None
     
-    train_loader = DataLoader(
-        dataset=train_dataset, 
-        batch_size=cfg.batch_size,
-        shuffle=True,
-        num_workers=cfg.num_workers_train,
-        drop_last=True,
-    )
+    else:
+        train_dataset = XRayDataset(is_train=True)
+        valid_dataset = XRayDataset(is_train=False)
+    
+        train_loader = DataLoader(
+            dataset=train_dataset, 
+            batch_size=cfg.batch_size,
+            shuffle=True,
+            num_workers=cfg.num_workers_train,
+            drop_last=True,
+        )
 
-    # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
-    valid_loader = DataLoader(
-        dataset=valid_dataset, 
-        batch_size=cfg.batch_size,
-        shuffle=False,
-        num_workers=cfg.num_workers_val,
-        drop_last=False
-    )
+        # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
+        valid_loader = DataLoader(
+            dataset=valid_dataset, 
+            batch_size=cfg.batch_size,
+            shuffle=False,
+            num_workers=cfg.num_workers_val,
+            drop_last=False
+        )
     
     model = build_smp_model(cfg)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

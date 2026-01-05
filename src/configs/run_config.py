@@ -21,6 +21,7 @@ def parse_args():
     parser.add_argument("--num_patience", type=int, default=NUM_PATIENCE)
     
     parser.add_argument("--use_wandb", action="store_true", help="use wandb logging")
+    parser.add_argument("--total", action="store_true")
 
     return parser.parse_args()
 
@@ -31,7 +32,7 @@ def build_config(args):
         loss_type=args.loss,
         scheduler=args.scheduler,
         optimizer=args.optim,
-        save_name=f"{args.model}_2048_flip_best.pt",
+        save_name=f"{args.model}_2048_total_best.pt",
 
         batch_size=args.batch_size,
         num_workers_train=NUM_WORKERS_TRAIN,
@@ -45,4 +46,5 @@ def build_config(args):
         seed=RANDOM_SEED,
         
         use_wandb=args.use_wandb,
+        total=args.total,
     )

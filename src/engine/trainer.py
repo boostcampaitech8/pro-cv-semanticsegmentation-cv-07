@@ -74,6 +74,13 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
     best_dice = 0.
     patience = 0
     
+    if cfg.total:
+        save_epochs = [25, 30, 35]
+        val_every = None
+    else:
+        save_epochs = []
+        val_every = cfg.val_every
+    
     for epoch in range(cfg.num_epochs):
         train_loss = 0
         model.train()
@@ -82,15 +89,14 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
             # gpu 연산을 위해 device 할당합니다.
             images, masks = images.cuda(), masks.cuda()
             
+            optimizer.zero_grad()
+            
             if images.shape[-2:] != (2048, 2048):
                 outputs = model(images)
                 loss = criterion(outputs, masks)
-                optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
             else:
-                optimizer.zero_grad()
-
                 with autocast():
                     outputs = model(images)
                     loss = criterion(outputs, masks)
@@ -109,8 +115,13 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
                     f'Step [{step+1}/{len(data_loader)}], '
                     f'Loss: {round(loss.item(),4)}'
                 )
-             
-        if (epoch + 1) % cfg.val_every == 0:
+
+        if cfg.total and (epoch + 1) in save_epochs:
+            output_path = os.path.join(SAVED_DIR, f"{epoch+1}epoch_{cfg.save_name}")
+            print(f"Save checkpoint at epoch {epoch+1} -> {output_path}")
+            torch.save(model.state_dict(), output_path)
+        
+        if not cfg.total and (epoch + 1) % val_every == 0:
             val_loss, dice = validation(epoch + 1, model, val_loader, criterion)
             
             if scheduler is not None:
