@@ -144,9 +144,9 @@ def train(model, data_loader, val_loader, seg_criterion, boundary_criterion, opt
 
                     # 4️⃣ Total loss
                     if cfg.boundary_detach:
-                        loss = loss_seg + 0.05 * loss_boundary.detach()
+                        loss = loss_seg + 0.02 * loss_boundary.detach()
                     else:
-                        loss = loss_seg + 0.05 * loss_boundary
+                        loss = loss_seg + 0.02 * loss_boundary
 
 
                 else:
@@ -265,7 +265,18 @@ def train(model, data_loader, val_loader, seg_criterion, boundary_criterion, opt
                 print(f"early stopping at {epoch + 1}epoch")
                 break
         elif cfg.boundary_mode == "basnet":
-            # basnet: 60epoch 이후부터 early stopping 활성화
-            if (epoch + 1) >= 60 and patience == cfg.num_patience:
-                print(f"[BASNet] early stopping at {epoch + 1}epoch (post-60)")
+            if patience == cfg.num_patience:
+                msg = f"[EARLY-STOP] basnet stopped at epoch {epoch + 1} | best_dice={best_dice:.4f}"
+                print(msg)
+
+                # 로그 파일 남기기
+                with open(os.path.join(EXP_DIR, "early_stop.txt"), "w") as f:
+                    f.write(msg + "\n")
+
+                if cfg.use_wandb:
+                    wandb.log({
+                        "early_stop/epoch": epoch + 1,
+                        "early_stop/best_dice": best_dice,
+                    })
+
                 break

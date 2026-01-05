@@ -29,7 +29,7 @@ PALETTE = [
 # 훈련 하이퍼 파라미터 기본 값 설정
 RANDOM_SEED = 21
 
-BATCH_SIZE = 2
+BATCH_SIZE = 1
 NUM_WORKERS_TRAIN = 4
 NUM_WORKERS_VAL = 0
 

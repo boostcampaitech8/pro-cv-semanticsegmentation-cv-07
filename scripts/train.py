@@ -83,8 +83,8 @@ def main():
         optimizer,
         mode="max",        # dice를 최대화할 거라서
         factor=0.5,
-        patience=3,
-        threshold=1e-4,
+        patience=5,
+        threshold=1e-3,
         min_lr=1e-6,
         verbose=True,
     )

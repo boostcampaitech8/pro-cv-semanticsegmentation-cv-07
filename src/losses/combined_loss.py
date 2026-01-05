@@ -16,7 +16,7 @@ class CombinedLoss(nn.Module):
             return self.bce(logits, targets)
 
         elif self.mode == "bce_dice":
-            return self.bce(logits, targets) + self.dice(logits, targets)
+            return self.bce(logits, targets) + 0.5 * self.dice(logits, targets)
 
         elif self.mode == "bce_dice_jaccard":
             return (
