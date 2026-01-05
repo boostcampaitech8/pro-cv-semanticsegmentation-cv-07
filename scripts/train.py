@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from src.losses.combined_loss import CombinedLoss
+from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmRestarts
 
 def main():
     args = parse_args()
@@ -78,8 +79,16 @@ def main():
     seg_criterion = CombinedLoss(mode=cfg.loss_mode)
     boundary_criterion = CombinedLoss(mode="bce")  # ← 고정
     optimizer = optim.Adam(params=model.parameters(), lr=cfg.lr, weight_decay=1e-6)
-
-    train(model, train_loader, valid_loader, seg_criterion, boundary_criterion, optimizer, cfg)
+    scheduler = ReduceLROnPlateau(
+        optimizer,
+        mode="max",        # dice를 최대화할 거라서
+        factor=0.5,
+        patience=3,
+        threshold=1e-4,
+        min_lr=1e-6,
+        verbose=True,
+    )
+    train(model, train_loader, valid_loader, seg_criterion, boundary_criterion, optimizer, scheduler, cfg)
 
 
 if __name__ == '__main__':

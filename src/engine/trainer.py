@@ -6,6 +6,7 @@ import torch
 import datetime
 from tqdm.auto import tqdm
 import torch.nn.functional as F
+from torch.cuda.amp import autocast, GradScaler
 
 # ===============================
 # Boundary GT 생성 (GPU friendly)
@@ -84,8 +85,10 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     return total_loss / len(data_loader), avg_dice, dice_class_dict, dices_per_class
 
 
-def train(model, data_loader, val_loader, seg_criterion, boundary_criterion, optimizer, cfg):
+def train(model, data_loader, val_loader, seg_criterion, boundary_criterion, optimizer, scheduler, cfg):
     print(f'Start training..')
+
+    scaler = GradScaler()   # ✅ AMP 핵심
 
     # ===============================
     # Experiment-specific directory
@@ -119,38 +122,40 @@ def train(model, data_loader, val_loader, seg_criterion, boundary_criterion, opt
             # gpu 연산을 위해 device 할당합니다.
             images, masks = images.cuda(), masks.cuda()
             
-            outputs = model(images)
-            
-            # loss를 계산합니다.
-            # ===============================
-            # Boundary-aware training
-            # ===============================
-            if isinstance(outputs, dict):
-                pred_seg = outputs["seg"]
-                pred_boundary = outputs["boundary"]
+            with autocast():   # ✅ AMP forward
+                outputs = model(images)
+                
+                # loss를 계산합니다.
+                # ===============================
+                # Boundary-aware training
+                # ===============================
+                if isinstance(outputs, dict):
+                    pred_seg = outputs["seg"]
+                    pred_boundary = outputs["boundary"]
 
-                # 1️⃣ Segmentation loss
-                loss_seg = seg_criterion(pred_seg, masks)
+                    # 1️⃣ Segmentation loss
+                    loss_seg = seg_criterion(pred_seg, masks)
 
-                # 2️⃣ Boundary GT 생성
-                boundary_gt = generate_boundary_label(masks)
+                    # 2️⃣ Boundary GT 생성
+                    boundary_gt = generate_boundary_label(masks)
 
-                # 3️⃣ Boundary loss
-                loss_boundary = boundary_criterion(pred_boundary, boundary_gt)
+                    # 3️⃣ Boundary loss
+                    loss_boundary = boundary_criterion(pred_boundary, boundary_gt)
 
-                # 4️⃣ Total loss
-                if cfg.boundary_detach:
-                    loss = loss_seg + 0.05 * loss_boundary.detach()
+                    # 4️⃣ Total loss
+                    if cfg.boundary_detach:
+                        loss = loss_seg + 0.05 * loss_boundary.detach()
+                    else:
+                        loss = loss_seg + 0.05 * loss_boundary
+
+
                 else:
-                    loss = loss_seg + 0.05 * loss_boundary
-
-
-            else:
-                # Baseline (U-Net++)
-                loss = seg_criterion(outputs, masks)
+                    # Baseline (U-Net++)
+                    loss = seg_criterion(outputs, masks)
             optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            scaler.scale(loss).backward()   # ✅ AMP backward
+            scaler.step(optimizer)
+            scaler.update()
             
             train_loss += loss.item()
             
@@ -165,6 +170,13 @@ def train(model, data_loader, val_loader, seg_criterion, boundary_criterion, opt
              
         if (epoch + 1) % cfg.val_every == 0:
             val_loss, dice, dice_class_dict, class_dice = validation(epoch + 1, model, val_loader, seg_criterion)
+            scheduler.step(dice)   # ReduceLROnPlateau는 metric 넣어야 함
+
+            current_lr = optimizer.param_groups[0]["lr"]
+            print(f"[LR] {current_lr:.2e}")
+            if cfg.use_wandb:
+                wandb.log({"lr": current_lr, "epoch": epoch + 1})
+
             # ===== [ADD] dice 변화량 계산 (validation 직후) =====
             delta = None
             abs_delta = None

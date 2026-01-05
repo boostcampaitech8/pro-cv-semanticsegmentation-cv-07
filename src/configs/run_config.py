@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument("--no_boundary_detach", action="store_false", dest="boundary_detach", help="turn OFF boundary loss detaching (default: ON)")
     parser.set_defaults(boundary_detach=True)
 
-    parser.add_argument("--loss_mode", type=str, default="bce", choices=["bce", "bce_dice", "bce_dice_jaccard"],)
+    parser.add_argument("--loss_mode", type=str, default="bce_dice", choices=["bce", "bce_dice", "bce_dice_jaccard"],)
 
     return parser.parse_args()
 
@@ -55,10 +55,10 @@ def build_config(args):
             f"{args.encoder}_"
             f"{args.boundary_mode}_{flag}_"
             f"{args.loss_mode}_"
-            f"{args.pretrained}_"
-            f"fold{args.fold}_"
-            f"e{args.num_epochs}_best.pt"
-        ),
+            f"img{INPUT_SIZE}_"
+            f"fold{args.fold}_best.pt"
+        )
+        ,
 
         pretrained=args.pretrained,
 
