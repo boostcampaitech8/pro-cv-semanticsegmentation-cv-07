@@ -144,9 +144,9 @@ def train(model, data_loader, val_loader, seg_criterion, boundary_criterion, opt
 
                     # 4️⃣ Total loss
                     if cfg.boundary_detach:
-                        loss = loss_seg + 0.02 * loss_boundary.detach()
+                        loss = loss_seg + 0.05 * loss_boundary.detach()
                     else:
-                        loss = loss_seg + 0.02 * loss_boundary
+                        loss = loss_seg + 0.05 * loss_boundary
 
 
                 else:
