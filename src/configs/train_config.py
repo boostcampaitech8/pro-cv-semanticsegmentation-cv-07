@@ -20,5 +20,7 @@ class TrainConfig:
     val_every: int
     num_patience: int
 
-    use_wandb: bool
     total:bool
+    tta: bool    
+
+    use_wandb: bool

@@ -5,11 +5,11 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from src.configs.defaults import IMAGE_ROOT, LABEL_ROOT, CLASSES, CLASS2IND, EXCLUDE_IMAGE_DIRS, EXCLUDE_LABEL_DIRS
-from src.data.transforms import get_train_transform, get_valid_transform
+from src.data.transforms import get_train_transform, get_valid_transform, get_tta_transform
 from src.data.utils import split_train_val, is_excluded
 
 class XRayDataset(Dataset):
-    def __init__(self, is_train=True, split_file=None, total=False):
+    def __init__(self, is_train=True, split_file=None, total=False, tta=False):
         
         # 이미지 및 라벨 불러오기
         pngs = {
@@ -66,6 +66,7 @@ class XRayDataset(Dataset):
         
         self.is_train = is_train
         self.transforms = get_train_transform() if self.is_train else get_valid_transform()
+        self.tta_transforms = get_tta_transform() if (not self.is_train) and tta else None
     
     def __len__(self):
         return len(self.filenames)
@@ -106,10 +107,20 @@ class XRayDataset(Dataset):
             
             image = result["image"]
             label = result["mask"] if self.is_train else label
+        
+        if (not self.is_train) and self.tta_transforms is not None:
+            tta_result = self.tta_transforms(image=image)
+            tta_image = tta_result["image"]
 
-        # to tenser will be done later
-        image = image.transpose(2, 0, 1)
-        label = label.transpose(2, 0, 1)
+            image = np.stack([image, tta_image], axis=0)
+            label = np.stack([label, label], axis=0)
+        
+        if self.tta_transforms is None:
+            image = image.transpose(2, 0, 1)
+            label = label.transpose(2, 0, 1)
+        else:
+            image = image.transpose(0, 3, 1, 2)
+            label = label.transpose(0, 3, 1, 2)
         
         image = torch.from_numpy(image).float()
         label = torch.from_numpy(label).float()

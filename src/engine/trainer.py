@@ -9,46 +9,73 @@ import torch.nn.functional as F
 from torch.cuda.amp import autocast, GradScaler
 
 
-def validation(epoch, model, data_loader, criterion, thr=0.5):
+def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
     print(f'Start validation #{epoch:2d}')
     model.eval()
     model = model.cuda()
 
     dices = []
+    total_loss = 0
+    cnt = 0
+    
     with torch.no_grad():
-        n_class = len(CLASSES)
-        total_loss = 0
-        cnt = 0
-
         for step, (images, masks) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images, masks = images.cuda(), masks.cuda()         
             
-            if images.shape[-2:] != (2048, 2048):
-                outputs = model(images)
-            
-                output_h, output_w = outputs.size(-2), outputs.size(-1)
-                mask_h, mask_w = masks.size(-2), masks.size(-1)
-            
-                # gt와 prediction의 크기가 다른 경우 prediction을 gt에 맞춰 interpolation 합니다.
-                if output_h != mask_h or output_w != mask_w:
-                    outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
-            
-                loss = criterion(outputs, masks)
-            else:
-                with autocast():
+            if not tta:
+                if images.shape[-2:] != (2048, 2048):
                     outputs = model(images)
+            
+                    output_h, output_w = outputs.size(-2), outputs.size(-1)
+                    mask_h, mask_w = masks.size(-2), masks.size(-1)
+            
+                    # gt와 prediction의 크기가 다른 경우 prediction을 gt에 맞춰 interpolation 합니다.
+                    if output_h != mask_h or output_w != mask_w:
+                        outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
+            
                     loss = criterion(outputs, masks)
+                else:
+                    with autocast():
+                        outputs = model(images)
+                        loss = criterion(outputs, masks)
             
-            total_loss += loss.item()
-            cnt += 1
+                total_loss += loss.item()
+                cnt += 1
             
-            outputs = torch.sigmoid(outputs)
-            outputs = (outputs > thr).float()
-            # outputs = (outputs > thr).detach().cpu()
-            # masks = masks.detach().cpu()
+                outputs = torch.sigmoid(outputs)
+                outputs = (outputs > thr).float()
             
-            dice = dice_coef(masks, outputs)
-            dices.append(dice)
+                dice = dice_coef(masks, outputs)
+                dices.append(dice)
+            else:
+                if images.dim() == 4 and images.size(0) % 2 == 0:  # TTA 2개 가정
+                    batch_size = images.size(0) // 2
+                    images = images.view(batch_size, 2, images.size(1), images.size(2), images.size(3))
+                    masks = masks.view(batch_size, 2, masks.size(1), masks.size(2), masks.size(3))
+                
+                batch_size, n_tta, C, H, W = images.shape            
+                outputs_tta = []
+                
+                for t in range(n_tta):
+                    img = images[:, t]
+                    with autocast():
+                        output = model(img)
+                    outputs_tta.append(output)
+                
+                outputs = torch.stack(outputs_tta, dim=1)
+                outputs[:, 1] = torch.flip(outputs[:, 1], dims=[-1])
+                outputs = torch.mean(outputs, dim=1)
+                
+                loss = criterion(outputs, masks[:, 0])
+                total_loss += loss.item()
+                cnt += 1
+                
+                outputs = torch.sigmoid(outputs)
+                outputs = (outputs > thr).float()
+            
+                dice = dice_coef(masks[:, 0], outputs)
+                dices.append(dice)
+                
                 
     dices = torch.cat(dices, 0)
     dices_per_class = torch.mean(dices, 0)
@@ -60,7 +87,6 @@ def validation(epoch, model, data_loader, criterion, thr=0.5):
     print(dice_str)
     
     avg_dice = dices_per_class.mean().item()
-    # avg_dice = torch.mean(dices_per_class).item()
     
     return total_loss / len(data_loader), avg_dice
 
@@ -75,7 +101,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
     patience = 0
     
     if cfg.total:
-        save_epochs = [25, 30, 35]
+        save_epochs = [cfg.num_epochs - 10, cfg.num_epochs - 5, cfg.num_epochs]
         val_every = None
     else:
         save_epochs = []
@@ -122,7 +148,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
             torch.save(model.state_dict(), output_path)
         
         if not cfg.total and (epoch + 1) % val_every == 0:
-            val_loss, dice = validation(epoch + 1, model, val_loader, criterion)
+            val_loss, dice = validation(epoch + 1, model, val_loader, criterion, tta=cfg.tta)
             
             if scheduler is not None:
                 if cfg.scheduler == "reduce":

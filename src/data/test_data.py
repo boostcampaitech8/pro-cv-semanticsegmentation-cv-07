@@ -4,11 +4,11 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from src.configs.defaults import TEST_IMAGE_ROOT
-from .transforms import  get_test_transform
+from .transforms import  get_test_transform, get_tta_transform
 
 
 class XRayInferenceDataset(Dataset):
-    def __init__(self):
+    def __init__(self, tta=False):
         pngs = {
             os.path.relpath(os.path.join(root, fname), start=TEST_IMAGE_ROOT)
             for root, _dirs, files in os.walk(TEST_IMAGE_ROOT)
@@ -21,6 +21,7 @@ class XRayInferenceDataset(Dataset):
         
         self.filenames = _filenames
         self.transforms = get_test_transform()
+        self.tta_transforms = get_tta_transform() if tta else None
     
     def __len__(self):
         return len(self.filenames)
@@ -36,9 +37,17 @@ class XRayInferenceDataset(Dataset):
             inputs = {"image": image}
             result = self.transforms(**inputs)
             image = result["image"]
+        
+        if self.tta_transforms is not None:
+            tta_result = self.tta_transforms(image=image)
+            tta_image = tta_result["image"]
 
-        # to tenser will be done later
-        image = image.transpose(2, 0, 1)  
+            image = np.stack([image, tta_image], axis=0)
+
+        if self.tta_transforms is None:
+            image = image.transpose(2, 0, 1)
+        else:
+            image = image.transpose(0, 3, 1, 2)
         
         image = torch.from_numpy(image).float()
             

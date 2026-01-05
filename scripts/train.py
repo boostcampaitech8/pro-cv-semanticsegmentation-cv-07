@@ -31,7 +31,7 @@ def main():
         wandb.init(
             project=os.getenv("WANDB_PROJECT"),
             entity=os.getenv("WANDB_ENTITY"),
-            name=f"{cfg.model_name}_2048_total",
+            name=f"{cfg.model_name}_2048_tta",
             config={
                 "batch_size": cfg.batch_size,
                 "lr": cfg.lr,
@@ -59,7 +59,7 @@ def main():
     
     else:
         train_dataset = XRayDataset(is_train=True)
-        valid_dataset = XRayDataset(is_train=False)
+        valid_dataset = XRayDataset(is_train=False, tta=cfg.tta)
     
         train_loader = DataLoader(
             dataset=train_dataset, 

@@ -11,10 +11,11 @@ from torch.utils.data import DataLoader
 def main():
     set_seed(RANDOM_SEED)
     
-    save_file_name = 'segformer_best.pt'
+    tta = True
+    save_file_name = 'upernet_2048_tta_best.pt'
     model = torch.load(os.path.join(SAVED_DIR, save_file_name), weights_only=False)
 
-    test_dataset = XRayInferenceDataset()
+    test_dataset = XRayInferenceDataset(tta)
 
     test_loader = DataLoader(
         dataset=test_dataset, 
@@ -24,7 +25,7 @@ def main():
         drop_last=False
     )
     
-    rles, filename_and_class = test(model, test_loader)
+    rles, filename_and_class = test(model, test_loader, tta=tta)
     
     classes, filename = zip(*[x.split("_") for x in filename_and_class])
     image_name = [os.path.basename(f) for f in filename]
