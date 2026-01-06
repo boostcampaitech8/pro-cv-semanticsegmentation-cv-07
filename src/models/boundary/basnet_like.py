@@ -9,6 +9,7 @@ from .blocks import BoundaryConfidenceGate
 from .refinement import BoundaryRefinementModule
 from .decoder_factory import build_unet_decoder
 from .transformer_mediator import BoundaryMediatorTransformer
+from .logit_scaler import ClassWiseLogitScaler
 
 
 
@@ -68,6 +69,8 @@ class BASNetLike(nn.Module):
         if self.use_transformer:
             self.mediator = BoundaryMediatorTransformer(dim=16)
 
+        self.logit_scaler = ClassWiseLogitScaler(num_classes)
+
 
     def forward(self, x):
         feats = self.encoder(x)
@@ -86,6 +89,9 @@ class BASNetLike(nn.Module):
         # 2️⃣ Refinement는 logits에서
         if self.use_refinement:
             seg_logits = self.boundary_refine(seg_logits, boundary_logits)
+
+        # ✅ class-wise logit scaling (핵심)
+        seg_logits = self.logit_scaler(seg_logits)
 
         return {
             "seg": seg_logits,

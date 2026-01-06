@@ -14,6 +14,19 @@ from torch.utils.data import DataLoader
 from src.losses.combined_loss import CombinedLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmRestarts
 
+def freeze_encoder_bn(model):
+    """
+    Freeze BatchNorm layers in encoder
+    - batch=1 + high-res 안정화 목적
+    """
+    if not hasattr(model, "encoder"):
+        return
+
+    for m in model.encoder.modules():
+        if isinstance(m, nn.BatchNorm2d):
+            m.eval()
+            m.requires_grad_(False)
+
 def main():
     args = parse_args()
     cfg = build_config(args)
@@ -73,6 +86,9 @@ def main():
     )
     
     model = build_model(cfg)
+    # ✅ [ADD] Encoder BN freeze (LAST TRY)
+    freeze_encoder_bn(model)
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     

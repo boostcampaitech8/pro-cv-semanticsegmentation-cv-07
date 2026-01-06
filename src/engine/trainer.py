@@ -11,7 +11,7 @@ from torch.cuda.amp import autocast, GradScaler
 # ===============================
 # Boundary GT 생성 (GPU friendly)
 # ===============================
-def generate_boundary_label(mask, kernel_size=3):
+def generate_boundary_label(mask, kernel_size=7):
     """
     mask: (B, C, H, W)  (multi-class mask)
     return: (B, 1, H, W) boundary map
