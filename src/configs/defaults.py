@@ -2,10 +2,12 @@ import os
 
 
 # 전역변수 설정
-IMAGE_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/train/DCM"
+TRIAN_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/train"
+SPLIT_FILE_ROOT = '/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/splits/fold_0'
 TEST_IMAGE_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/test/DCM"
-LABEL_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/train/outputs_json"
 SAVED_DIR = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/outputs/checkpoints"
+
+
 CLASSES = [
     'finger-1', 'finger-2', 'finger-3', 'finger-4', 'finger-5',
     'finger-6', 'finger-7', 'finger-8', 'finger-9', 'finger-10',

@@ -1,4 +1,3 @@
-from src.configs.defaults import SAVED_DIR, CLASSES
 from src.configs.run_config import parse_args, build_config
 from src.data.train_data import XRayDataset
 from src.utils.set_seed import set_seed
@@ -20,8 +19,8 @@ def main():
     
     set_seed(cfg.seed)
     
-    if not os.path.exists(SAVED_DIR):                                                           
-        os.makedirs(SAVED_DIR)
+    if not os.path.exists(cfg.saved_root):                                                           
+        os.makedirs(cfg.saved_root)
     
     if cfg.use_wandb:
         load_dotenv()
@@ -44,32 +43,12 @@ def main():
 
         wandb.config.update({"monitor_memory": True})
     
+    train_dataset = XRayDataset(cfg, is_train=True)
     if cfg.total:
-        train_dataset = XRayDataset(is_train=True, total=True)
-        print(f"전체 데이터 로드 확인: {len(train_dataset)}")
-        
-        train_loader = DataLoader(
-            dataset=train_dataset, 
-            batch_size=cfg.batch_size,
-            shuffle=True,
-            num_workers=cfg.num_workers_train,
-            drop_last=True,
-        )
         valid_loader = None
-    
     else:
-        train_dataset = XRayDataset(is_train=True)
-        valid_dataset = XRayDataset(is_train=False, tta=cfg.tta)
+        valid_dataset = XRayDataset(cfg, is_train=False)
     
-        train_loader = DataLoader(
-            dataset=train_dataset, 
-            batch_size=cfg.batch_size,
-            shuffle=True,
-            num_workers=cfg.num_workers_train,
-            drop_last=True,
-        )
-
-        # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
         valid_loader = DataLoader(
             dataset=valid_dataset, 
             batch_size=cfg.batch_size,
@@ -77,6 +56,13 @@ def main():
             num_workers=cfg.num_workers_val,
             drop_last=False
         )
+    train_loader = DataLoader(
+        dataset=train_dataset, 
+        batch_size=cfg.batch_size,
+        shuffle=True,
+        num_workers=cfg.num_workers_train,
+        drop_last=True,
+    )
     
     model = build_smp_model(cfg)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
