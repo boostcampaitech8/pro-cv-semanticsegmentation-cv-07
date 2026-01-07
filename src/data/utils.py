@@ -32,10 +32,34 @@ def load_HandBonesDataset(image_root, label_root):
     return pngs, jsons
 
 
+def remove_noise(pngs, jsons):
+    exclude_pngs = [
+        "ID363/image1664935962797.png",
+        "ID487/image1666661955150.png"
+    ]
+    exclude_jsons = [
+        "ID363/image1664935962797.json",
+        "ID487/image1666661955150.json"
+    ]
+
+    filenames = np.array(pngs)
+    labelnames = np.array(jsons)
+    
+    mask_png = np.array([f not in exclude_pngs for f in filenames])
+    mask_json = np.array([f not in exclude_jsons for f in labelnames])
+    
+    pngs = list(filenames[mask_png])
+    jsons = list(labelnames[mask_json])
+    
+    return pngs, jsons
+
+
 def split_train_val(cfg, pngs, jsons, is_train=True):
     
     # 파일 명이 random일 시, 5-fold random split 적용 
     if cfg.split_file_root == "random":
+        pngs, jsons = remove_noise(pngs, jsons)
+        
         filenames = np.array(pngs)
         labelnames = np.array(jsons)
         
@@ -107,11 +131,3 @@ def decode_rle_to_mask(rle, height, width):
         img[lo:hi] = 1
     
     return img.reshape(height, width)
-
-
-def is_excluded(root, base_dir, exclude_dirs):
-    rel = os.path.normpath(os.path.relpath(root, base_dir))
-    return any(
-        rel == d or rel.startswith(d + os.sep)
-        for d in exclude_dirs
-    )
