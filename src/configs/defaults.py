@@ -4,7 +4,7 @@ import os
 # 전역변수 설정
 TRIAN_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/train"
 SPLIT_FILE_ROOT = '/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/splits/fold_0'
-TEST_IMAGE_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/test/DCM"
+TEST_ROOT = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/test/DCM"
 SAVED_DIR = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/outputs/checkpoints"
 
 

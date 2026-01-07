@@ -21,7 +21,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
         for step, (images, masks) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images, masks = images.cuda(), masks.cuda()         
             
-            if tta:
+            if not tta:
                 if images.shape[-2:] != (2048, 2048):
                     outputs = model(images)
             

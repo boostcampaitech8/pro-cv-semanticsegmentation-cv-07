@@ -3,15 +3,16 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from src.configs.defaults import TEST_IMAGE_ROOT
 from .transforms import  get_test_transform, get_tta_transform
 
 
 class XRayInferenceDataset(Dataset):
-    def __init__(self, tta=False):
+    def __init__(self, args):
+        self.image_root = args.data
+        
         pngs = {
-            os.path.relpath(os.path.join(root, fname), start=TEST_IMAGE_ROOT)
-            for root, _dirs, files in os.walk(TEST_IMAGE_ROOT)
+            os.path.relpath(os.path.join(root, fname), start=self.image_root)
+            for root, _dirs, files in os.walk(self.image_root)
             for fname in files
             if os.path.splitext(fname)[1].lower() == ".png"
         }
@@ -20,15 +21,15 @@ class XRayInferenceDataset(Dataset):
         _filenames = np.array(sorted(_filenames))
         
         self.filenames = _filenames
-        self.transforms = get_test_transform()
-        self.tta_transforms = get_tta_transform() if tta else None
+        self.transforms = get_test_transform(args.img_size)
+        self.tta_transforms = get_tta_transform() if args.tta else None
     
     def __len__(self):
         return len(self.filenames)
     
     def __getitem__(self, item):
         image_name = self.filenames[item]
-        image_path = os.path.join(TEST_IMAGE_ROOT, image_name)
+        image_path = os.path.join(self.image_root, image_name)
         
         image = cv2.imread(image_path)
         image = image / 255.

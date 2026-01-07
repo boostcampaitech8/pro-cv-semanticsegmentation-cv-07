@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument("--total", action="store_true")   # no valid
     parser.add_argument("--tta", action="store_true")
     
-    parser.add_argument("-img_size", type=int, default=2048)
+    parser.add_argument("--img_size", type=int, default=2048)
     parser.add_argument("--use_scale", action="store_true")
     parser.add_argument("--use_rotate", action="store_true")
     parser.add_argument("--use_flip", action="store_true")

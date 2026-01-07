@@ -55,9 +55,9 @@ def get_valid_transform(cfg):
         A.Resize(cfg.img_size, cfg.img_size)
     ])
 
-def get_test_transform(cfg):
+def get_test_transform(img_size):
     return A.Compose([
-        A.Resize(cfg.img_size, cfg.img_size)
+        A.Resize(img_size, img_size)
     ])
 
 def get_tta_transform():
