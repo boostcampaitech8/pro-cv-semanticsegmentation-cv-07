@@ -24,12 +24,6 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
             if not tta:
                 if images.shape[-2:] != (2048, 2048):
                     outputs = model(images)
-            
-                    output_h, output_w = outputs.size(-2), outputs.size(-1)
-                    mask_h, mask_w = masks.size(-2), masks.size(-1)
-            
-                    if output_h != mask_h or output_w != mask_w:
-                        outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
                 else:
                     with torch.amp.autocast(device_type="cuda"):
                         outputs = model(images)
@@ -49,12 +43,6 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
                     
                     if img.shape[-2:] != (2048, 2048):
                         output = model(img)
-            
-                        output_h, output_w = output.size(-2), output.size(-1)
-                        mask_h, mask_w = masks.size(-2), masks.size(-1)
-            
-                        if output_h != mask_h or output_w != mask_w:
-                            output = F.interpolate(output, size=(mask_h, mask_w), mode="bilinear") 
                     else:
                         with torch.amp.autocast(device_type="cuda"):
                             output = model(img)
@@ -65,6 +53,12 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
                     outputs[:, 1] = torch.flip(outputs[:, 1], dims=[-1])
                     outputs = torch.mean(outputs, dim=1)
                     masks = masks[:, 0]
+            
+            output_h, output_w = outputs.size(-2), outputs.size(-1)
+            mask_h, mask_w = masks.size(-2), masks.size(-1)
+            
+            if output_h != mask_h or output_w != mask_w:
+                output = F.interpolate(output, size=(mask_h, mask_w), mode="bilinear") 
                 
             loss = criterion(outputs, masks)
             total_loss += loss.item()
