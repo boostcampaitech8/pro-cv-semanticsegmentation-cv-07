@@ -1,6 +1,7 @@
 import albumentations as A
 import cv2
 
+
 def get_train_transform(cfg):
     t = [A.Resize(cfg.img_size, cfg.img_size)]
     
@@ -50,15 +51,18 @@ def get_train_transform(cfg):
         
     return A.Compose(t)
 
+
 def get_valid_transform(cfg):
     return A.Compose([
         A.Resize(cfg.img_size, cfg.img_size)
     ])
 
+
 def get_test_transform(img_size):
     return A.Compose([
         A.Resize(img_size, img_size)
     ])
+
 
 def get_tta_transform():
     return A.Compose([

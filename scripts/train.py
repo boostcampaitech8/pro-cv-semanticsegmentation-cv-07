@@ -30,7 +30,7 @@ def main():
         wandb.init(
             project=os.getenv("WANDB_PROJECT"),
             entity=os.getenv("WANDB_ENTITY"),
-            name=f"{cfg.model_name}_2048_tta",
+            name=f"{cfg.saved_name}",
             config={
                 "batch_size": cfg.batch_size,
                 "lr": cfg.lr,

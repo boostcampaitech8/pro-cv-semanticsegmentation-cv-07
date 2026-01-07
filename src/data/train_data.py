@@ -8,6 +8,7 @@ from src.configs.defaults import CLASSES, CLASS2IND
 from src.data.transforms import get_train_transform, get_valid_transform, get_tta_transform
 from src.data.utils import load_HandBonesDataset, split_train_val
 
+
 class XRayDataset(Dataset):
     def __init__(self, cfg, is_train=True):
         self.image_root = os.path.join(cfg.data_root, "DCM")
