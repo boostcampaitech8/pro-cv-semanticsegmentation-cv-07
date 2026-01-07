@@ -49,10 +49,10 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
 
                     outputs_tta.append(output)
                 
-                    outputs = torch.stack(outputs_tta, dim=1)
-                    outputs[:, 1] = torch.flip(outputs[:, 1], dims=[-1])
-                    outputs = torch.mean(outputs, dim=1)
-                    masks = masks[:, 0]
+                outputs = torch.stack(outputs_tta, dim=1)
+                outputs[:, 1] = torch.flip(outputs[:, 1], dims=[-1])
+                outputs = torch.mean(outputs, dim=1)
+                masks = masks[:, 0]
             
             output_h, output_w = outputs.size(-2), outputs.size(-1)
             mask_h, mask_w = masks.size(-2), masks.size(-1)
