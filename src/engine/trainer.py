@@ -58,7 +58,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
             mask_h, mask_w = masks.size(-2), masks.size(-1)
             
             if output_h != mask_h or output_w != mask_w:
-                output = F.interpolate(output, size=(mask_h, mask_w), mode="bilinear") 
+                outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear") 
                 
             loss = criterion(outputs, masks)
             total_loss += loss.item()
