@@ -24,9 +24,13 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
             if not tta:
                 if images.shape[-2:] != (2048, 2048):
                     outputs = model(images)
+                    if isinstance(outputs, dict):
+                        outputs = outputs["seg"]
                 else:
                     with torch.amp.autocast(device_type="cuda"):
                         outputs = model(images)
+                        if isinstance(outputs, dict):
+                            outputs = outputs["seg"]
                         
             else:
                 # 원본 데이터 + TTA 데이터 형태
@@ -117,13 +121,15 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
                 else:
                     pred_seg = outputs
 
-                loss = seg_criterion(pred_seg, masks)
+                loss = criterion(pred_seg, masks)
                 loss.backward()
                 optimizer.step()
             else:
             # (2048, 2048)인 경우, Mixed Precision Training 적용
                 with torch.amp.autocast(device_type="cuda"):
                     outputs = model(images)
+                    if isinstance(outputs, dict):
+                        outputs = outputs["seg"]
                     loss = criterion(outputs, masks)
 
                 scaler.scale(loss).backward()
