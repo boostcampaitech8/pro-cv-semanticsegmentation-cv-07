@@ -69,6 +69,8 @@ def build_smp_model(cfg, encoder_weights="imagenet", in_channels=3, classes=29):
         )
 
     if cfg.boundary_mode == "basnet":
+        # BASNet-like:
+        # boundary는 refinement 신호로만 사용
         return BASNetLike(
             base_model=base_model,
             num_classes=len(CLASSES),
