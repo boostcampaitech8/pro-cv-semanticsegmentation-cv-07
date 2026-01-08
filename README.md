@@ -195,6 +195,8 @@
         |-- __init__.py
         `-- set_seed.py
 ```
+##swin unet
+swin_unet을 사용하기 위해서는 external 폴더에 swin_unet을 git clone 해야함 . https://github.com/HuCaoFighting/Swin-Unet
 
 ## 🛠 Ensemble Usage
 
@@ -250,5 +252,6 @@ python -u scripts/ensemble.py \
 ## Wrap-Up report
 
 [📄Wrap-Up report](assets/wrap_up_report.pdf)
+
 
 
