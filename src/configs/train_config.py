@@ -40,6 +40,5 @@ class TrainConfig:
     use_refinement: bool
     use_transformer: bool
     boundary_detach: bool
-    loss_mode: str
     
     pretrained: str

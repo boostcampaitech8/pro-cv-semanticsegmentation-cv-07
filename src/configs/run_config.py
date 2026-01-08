@@ -48,8 +48,6 @@ def parse_args():
     parser.add_argument("--no_boundary_detach", action="store_false", dest="boundary_detach", help="Do not detach boundary detection branch during training")
     parser.set_defaults(boundary_detach=True)
 
-    parser.add_argument("--loss_mode", type=str, default="BD",)
-
     parser.add_argument("--pretrained", type=str, default="imagenet", choices=["imagenet", "scratch"], help="encoder pretrained weights")
 
     return parser.parse_args()
@@ -95,6 +93,5 @@ def build_config(args):
         use_refinement=args.use_refinement,
         use_transformer=args.use_transformer,
         boundary_detach=args.boundary_detach,
-        loss_mode=args.loss_mode,
         pretrained=args.pretrained,
     )

@@ -17,6 +17,8 @@ def test(model, data_loader, thr=0.5, tta=False):
             
             if not tta: 
                 outputs = model(images)
+                if isinstance(outputs, dict):
+                    outputs = outputs["seg"]
             else:
                 if images.dim() == 4 and images.size(0) % 2 == 0:  # TTA 2개 가정
                     batch_size = images.size(0) // 2
