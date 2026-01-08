@@ -25,7 +25,8 @@ def parse_args():
     
     # 모델 설정
     parser.add_argument("--model", type=str, default='upernet')
-    parser.add_argument("--encoder", type=str, default='resnext50_32x4d')
+    parser.add_argument("--encoder", type=str, default='resnext50_32x4d') 
+    parser.add_argument("--window_size", type=int, default=16)
     parser.add_argument("--loss", type=str, default='BDJ')
     parser.add_argument("--scheduler", type=str, default="warmup")
     parser.add_argument("--optim", type=str, default="adam")
@@ -60,6 +61,7 @@ def build_config(args):
         
         model_name=args.model,
         encoder_name=args.encoder,
+        window_size=args.window_size,
         loss_type=args.loss,
         scheduler=args.scheduler,
         optimizer=args.optim,

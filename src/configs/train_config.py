@@ -1,4 +1,8 @@
-from dataclasses import dataclass
+import yaml
+#import copy
+from dataclasses import dataclass#, field, asdict
+from typing import Any, Dict
+
 
 @dataclass
 class TrainConfig:
@@ -18,6 +22,7 @@ class TrainConfig:
     
     model_name: str
     encoder_name: str
+    window_size:str
     loss_type: str
     scheduler: str
     optimizer: str
@@ -34,3 +39,4 @@ class TrainConfig:
     num_patience: int  
 
     use_wandb: bool
+    
