@@ -77,3 +77,14 @@ def get_test_transform(img_size):
     return A.Compose([
         A.Resize(img_size, img_size)
     ])
+    
+    
+def get_tta_transform():
+    return A.Compose([
+        A.HorizontalFlip(p=1.0),
+        A.RandomBrightnessContrast(
+            brightness_limit=0.0,
+            contrast_limit=(0.1, 0.3),
+            p=1.0
+        )
+    ])

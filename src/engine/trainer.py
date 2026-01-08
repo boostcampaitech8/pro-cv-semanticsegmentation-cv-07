@@ -91,7 +91,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
             # train_loss += loss.item()
             #gradient accumulation와 AMP 적용.
             with autocast():
-                outputs = model(images)
+                outputs = model(images) 
                 loss = criterion(outputs, masks)
                 loss = loss / acum         
 
@@ -142,6 +142,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, save_file_name,s
                 best_epoch=epoch
                 #torch.save(model, output_path)
             #     torch.save({
+                
             #     'epoch': epoch,
             #     'model_state_dict': model.state_dict(),
             #     'optimizer_state_dict': optimizer.state_dict(),
