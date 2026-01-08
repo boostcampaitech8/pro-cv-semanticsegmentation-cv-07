@@ -26,7 +26,7 @@ class BASNetLike(nn.Module):
         self.decoder = base_model.decoder
         self.seg_head = base_model.segmentation_head
 
-        decoder_out_ch = self.seg_head.in_channels
+        decoder_out_ch = self.decoder.out_channels[-1]
 
         self.boundary_head = nn.Conv2d(
             decoder_out_ch, 1, kernel_size=1
