@@ -123,3 +123,55 @@
 
 **Private**  
 <img src="assets/private.png" width="600"/>
+
+
+## 🛠 Ensemble Usage
+
+사용된 모델(HRNet, Swin-Unet, UperNet 등)과 모델별 입력 해상도(1024, 2048 등)를 지원하는 앙상블 스크립트 
+
+- Soft Voting, Hard Voting, TTA(Flip, Contrast) 및 Class-specific Thresholds 적용
+
+### 실행 스크립트 예시 (`run_ensemble.sh`)
+
+아래 스크립트를 `run_ensemble.sh`로 저장하여 실행
+
+모델 가중치 경로와 해상도(`path:size`), 그리고 각 클래스별 임계값(Threshold)을 상황에 맞게 수정해야 함
+
+```bash
+#!/bin/bash
+
+export PYTHONPATH=$PYTHONPATH:.
+
+# ================= Configuration =================
+
+MODEL1="outputs/checkpoints/HRNet32_OCR_2048_fold0.pt:2048"
+MODEL2="outputs/checkpoints/SWIN_UNET_best_model_1024.pt:1024"
+MODEL3="outputs/checkpoints/upernet_2048_flip_best.pt:2048"
+
+MODEL_SCORES="0.9753 0.9575 0.9745"
+
+THRESHOLDS="0.449 0.615 0.611 0.617 0.611 0.524 0.588 0.458 0.566 0.541 \
+0.594 0.684 0.759 0.563 0.629 0.555 0.647 0.545 0.593 0.467 \
+0.158 0.331 0.542 0.563 0.607 0.597 0.396 0.482 0.799"
+
+VOTING_TYPE="soft"       # 'soft' or 'hard'
+BATCH_SIZE=2
+OUTPUT_NAME="submission_ensemble.csv"
+
+# ================= Execution =================
+
+echo "Starting Ensemble Inference..."
+echo "Models: 3 types | Voting: $VOTING_TYPE"
+
+python -u scripts/ensemble.py \
+    --model_configs $MODEL1 $MODEL2 $MODEL3 \
+    --model_scores $MODEL_SCORES \
+    --voting $VOTING_TYPE \
+    --batch_size $BATCH_SIZE \
+    --thr $THRESHOLDS \
+    --contrast_settings 0.0 -1 \
+    --weight_min 0.1 \
+    --weight_max 1.0 \
+    --use_flip_tta \
+    --output_csv $OUTPUT_NAME
+```
