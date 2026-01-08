@@ -163,11 +163,14 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
                 if cfg.boundary_mode != "none":
                     pred_boundary = outputs["boundary"]
                     loss_seg = criterion(pred_seg, masks)
+                    # boundary GT는 segmentation mask에서 morphological operation으로 생성
                     boundary_gt = generate_boundary_label(masks)
                     loss_boundary = F.binary_cross_entropy_with_logits(
                         pred_boundary, boundary_gt
                     )
-
+                    # boundary_detach=True:
+                    # - boundary loss는 boundary head만 학습
+                    # - segmentation branch에는 영향 x
                     if cfg.boundary_detach:
                         loss = loss_seg + 0.05 * loss_boundary.detach()
                     else:

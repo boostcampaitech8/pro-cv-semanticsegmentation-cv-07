@@ -4,6 +4,11 @@ import torch.nn.functional as F
 
 
 class DualHeadBoundaryNet(nn.Module):
+    """
+    segmentation과 boundary를 완전히 병렬 head로 분리한 구조.
+    - refinement 없음
+    - boundary는 auxiliary loss 용도
+    """
     def __init__(self, base_model, detach_boundary=True):
         super().__init__()
         self.base_model = base_model
@@ -29,7 +34,7 @@ class DualHeadBoundaryNet(nn.Module):
         seg_logits = self.seg_head(decoder_output)
 
         boundary_feat = (
-            decoder_output.detach()
+            decoder_output.detach() # boundary loss가 decoder로 역전파되지 않도록 차단
             if self.detach_boundary else decoder_output
         )
         boundary_logits = self.boundary_head(boundary_feat)
