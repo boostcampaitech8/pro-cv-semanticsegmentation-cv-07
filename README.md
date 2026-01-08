@@ -119,10 +119,10 @@
 </table>
 
 **Public**  
-<img src="assets/public.png" width="600"/>
+<img src="assets/public.png" width="800"/>
 
 **Private**  
-<img src="assets/private.png" width="600"/>
+<img src="assets/private.png" width="800"/>
 
 ## Project Structure
 ```
@@ -136,7 +136,10 @@
 |   |-- best_threshold.ipynb
 |   |-- check_overlap_dice.ipynb
 |   |-- result_visualization.ipynb
-|   `-- visualization.py
+|   |-- visualization.py
+|   |-- EDA_part_1.ipynb
+|   |-- EDA_part_2.ipynb
+|   `-- Validation_Split.ipynb
 |-- external
 |   `-- Swin-Unet
 |-- scripts
@@ -192,6 +195,8 @@
         |-- __init__.py
         `-- set_seed.py
 ```
+-swin unet
+swin_unet을 사용하기 위해서는 external 폴더에 swin_unet을 git clone 해야함 . https://github.com/HuCaoFighting/Swin-Unet
 
 ## 🛠 Ensemble Usage
 
@@ -247,4 +252,8 @@ python -u scripts/ensemble.py \
 ## Wrap-Up report
 
 [📄Wrap-Up report](assets/wrap_up_report.pdf)
+
+
+
+
 

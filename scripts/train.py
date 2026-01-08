@@ -70,7 +70,7 @@ def main():
     
     criterion = build_loss(cfg)
     optimizer = get_optimizer(cfg, model)
-    scheduler = build_scheduler(cfg, optimizer)
+    scheduler = build_scheduler(cfg, optimizer, steps_per_epoch=len(train_loader))
 
     train(model, train_loader, valid_loader, criterion, optimizer, scheduler, cfg)
 
