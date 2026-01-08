@@ -39,6 +39,17 @@ def parse_args():
     
     parser.add_argument("--use_wandb", action="store_true", help="use wandb logging")
 
+    # ===== Boundary options (ADD) =====
+    parser.add_argument("--boundary_mode", type=str, default="none", choices=["none", "dual", "basnet"], help="Boundary detection mode")
+
+    parser.add_argument("--use_refinement", action="store_true")
+    parser.add_argument("--use_transformer", action="store_true")
+
+    parser.add_argument("--no_boundary_detach", action="store_false", dest="boundary_detach", help="Do not detach boundary detection branch during training")
+    parser.set_defaults(boundary_detach=True)
+
+    parser.add_argument("--loss_mode", type=str, default="BD",)
+
     return parser.parse_args()
 
 
