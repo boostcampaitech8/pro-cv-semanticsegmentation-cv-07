@@ -136,7 +136,10 @@
 |   |-- best_threshold.ipynb
 |   |-- check_overlap_dice.ipynb
 |   |-- result_visualization.ipynb
-|   `-- visualization.py
+|   |-- visualization.py
+|   |-- EDA_part_1.ipynb
+|   |-- EDA_part_2.ipynb
+|   `-- Validation_Split.ipynb
 |-- external
 |   `-- Swin-Unet
 |-- scripts
@@ -247,4 +250,5 @@ python -u scripts/ensemble.py \
 ## Wrap-Up report
 
 [📄Wrap-Up report](assets/wrap_up_report.pdf)
+
 
