@@ -6,7 +6,6 @@ wandb/
 
 .env
 *.csv
-*.png
 
 /mmsegmentation/
 
