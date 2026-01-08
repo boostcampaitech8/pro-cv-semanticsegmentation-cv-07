@@ -1,7 +1,13 @@
 src/datasets/
-outputs/
+*outputs/
 
 __pycache__/
 wandb/
 
 .env
+*.csv
+*.png
+
+/mmsegmentation/
+
+/*logs
