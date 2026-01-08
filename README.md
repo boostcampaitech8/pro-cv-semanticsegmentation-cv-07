@@ -1,25 +1,60 @@
-# Hand Bone Segmentation
+# Hand Bone Image Segmentation
 
-## 주의사항
-- `src/configs/config.py` 파일에서 데이터 경로 확인
-- 데이터는 `src/datasets` 내부에 넣는 것을 추천
-- `wandb` 설정을 위해 `.env` 파일 작성:
+## Team
 
-```text
-WANDB_API_KEY=[본인 키] 
-WANDB_ENTITY=CV-07
-WANDB_PROJECT=Hand-Bone-Segmentation
-```
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/tenaan">
+        <img src="https://github.com/tenaan.png" width="100px;" alt=""/>
+        <br />
+        <sub><b>안태현</b></sub>
+      </a>
+      <br />
+      <a href="https://github.com/tenaan" title="Code"></a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/jjeongbin0826">
+        <img src="https://github.com/jjeongbin0826.png" width="100px;" alt=""/>
+        <br />
+        <sub><b>최정빈</b></sub>
+      </a>
+      <br />
+      <a href="https://github.com/jjeongbin0826" title="Code"></a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/chocobanana20">
+        <img src="https://github.com/chocobanana20.png" width="100px;" alt=""/>
+        <br />
+        <sub><b>이승현</b></sub>
+      </a>
+      <br />
+      <a href="https://github.com/chocobanana20" title="Code"></a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/wooqi00">
+        <img src="https://github.com/wooqi00.png" width="100px;" alt=""/>
+        <br />
+        <sub><b>윤종욱</b></sub>
+      </a>
+      <br />
+      <a href="https://github.com/wooqi00" title="Code"></a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Jun00511">
+        <img src="https://github.com/Jun00511.png" width="100px;" alt=""/>
+        <br />
+        <sub><b>박준영</b></sub>
+      </a>
+      <br />
+      <a href="https://github.com/Jun00511" title="Code"></a>
+    </td>
+  </tr>
+</table>
 
-## 학습
-```bash
-python -m scripts.train --model unet --use_wandb
-```
+## Project Overview
 
-## 추론
-- 아직 parser 추가 X, 하드 코딩해야 됨
-```bash
-python -m scripts.test
-```
+본 프로젝트는 Hand Bone X-ray 이미지를 활용하여 뼈 영역을 정밀하게 분할하는 Bone Segmentation 모델 개발을 목표로 한다. 이를 통해 골절 진단, 수술 계획 수립, 맞춤형 의료 장비 제작 등 의료 현장에서의 진단 정확도와 업무 효율성 향상에 기여하고자 한다.
+
 
 
