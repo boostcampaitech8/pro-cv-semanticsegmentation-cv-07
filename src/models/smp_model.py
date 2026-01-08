@@ -25,7 +25,7 @@ def build_smp_model(cfg, encoder_weights="imagenet", in_channels=3, classes=29):
         from src.models.swin_unet import build_swin_unet
         return build_swin_unet(cfg)
     
-    if model_name not in SMP_MODELS:
+    elif model_name not in SMP_MODELS:
         raise ValueError(f"Unknown model_name {cfg.model_name}, choose from {list(SMP_MODELS.keys())}")
 
     model_cls = SMP_MODELS[model_name]
