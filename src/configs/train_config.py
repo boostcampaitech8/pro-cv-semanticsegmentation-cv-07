@@ -21,6 +21,7 @@ class TrainConfig:
     use_contrast: bool
     
     model_name: str
+    model_conf: str # for HRNet
     encoder_name: str
     window_size:str
     loss_type: str
@@ -39,4 +40,4 @@ class TrainConfig:
     num_patience: int  
 
     use_wandb: bool
-    
+    poly_power: float = 0.9
