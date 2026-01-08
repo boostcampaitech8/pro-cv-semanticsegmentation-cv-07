@@ -1,6 +1,7 @@
 import segmentation_models_pytorch as smp
 from src.models.boundary.dual_head import DualHeadBoundaryNet
 from src.models.boundary.basnet_like import BASNetLike
+from src.configs.defaults import CLASSES
 
 
 SMP_MODELS = {
@@ -70,8 +71,10 @@ def build_smp_model(cfg, encoder_weights="imagenet", in_channels=3, classes=29):
     if cfg.boundary_mode == "basnet":
         return BASNetLike(
             base_model=base_model,
+            num_classes=len(CLASSES),
             use_refinement=cfg.use_refinement,
             use_transformer=cfg.use_transformer,
+            detach_boundary=cfg.boundary_detach,
         )
 
     raise ValueError(f"Unknown boundary_mode: {cfg.boundary_mode}")
