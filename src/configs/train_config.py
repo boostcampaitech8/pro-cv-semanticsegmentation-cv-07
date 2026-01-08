@@ -36,8 +36,10 @@ class TrainConfig:
     use_wandb: bool
 
     # ===== boundary options (ADD) =====
-    boundary_mode: str = "none"
-    use_refinement: bool = False
-    use_transformer: bool = False
-    boundary_detach: bool = True
-    loss_mode: str = "BD"
+    boundary_mode: str
+    use_refinement: bool
+    use_transformer: bool
+    boundary_detach: bool
+    loss_mode: str
+    
+    pretrained: str

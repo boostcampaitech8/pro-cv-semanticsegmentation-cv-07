@@ -50,6 +50,8 @@ def parse_args():
 
     parser.add_argument("--loss_mode", type=str, default="BD",)
 
+    parser.add_argument("--pretrained", type=str, default="imagenet", choices=["imagenet", "scratch"], help="encoder pretrained weights")
+
     return parser.parse_args()
 
 
@@ -94,4 +96,5 @@ def build_config(args):
         use_transformer=args.use_transformer,
         boundary_detach=args.boundary_detach,
         loss_mode=args.loss_mode,
+        pretrained=args.pretrained,
     )
