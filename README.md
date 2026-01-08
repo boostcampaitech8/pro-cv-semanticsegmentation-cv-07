@@ -118,4 +118,8 @@
   </tbody>
 </table>
 
+**Public**  
+<img src="assets/public.png" width="600"/>
 
+**Private**  
+<img src="assets/private.png" width="600"/>
