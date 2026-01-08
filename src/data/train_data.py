@@ -4,59 +4,44 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from src.configs.defaults import IMAGE_ROOT, LABEL_ROOT, CLASSES, CLASS2IND
-from src.data.transforms import get_train_transform, get_valid_transform
-from src.data.utils import split_train_val
+from src.configs.defaults import CLASSES, CLASS2IND
+from src.data.transforms import get_train_transform, get_valid_transform, get_tta_transform
+from src.data.utils import load_HandBonesDataset, split_train_val
+
 
 class XRayDataset(Dataset):
-    def __init__(self, is_train=True):
+    def __init__(self, cfg, is_train=True):
+        self.image_root = os.path.join(cfg.data_root, "DCM")
+        self.label_root = os.path.join(cfg.data_root, "outputs_json")
         
-        # 이미지 및 라벨 불러오기
-        pngs = {
-            os.path.relpath(os.path.join(root, fname), start=IMAGE_ROOT)
-            for root, _dirs, files in os.walk(IMAGE_ROOT)
-            for fname in files
-            if os.path.splitext(fname)[1].lower() == ".png"
-        }
-        jsons = {
-            os.path.relpath(os.path.join(root, fname), start=LABEL_ROOT)
-            for root, _dirs, files in os.walk(LABEL_ROOT)
-            for fname in files
-            if os.path.splitext(fname)[1].lower() == ".json"
-        }
+        pngs, jsons = load_HandBonesDataset(self.image_root, self.label_root)
         
-        # 모든 .png 파일에 대해 .json 파일이 존재하는지 확인
-        jsons_fn_prefix = {os.path.splitext(fname)[0] for fname in jsons}
-        pngs_fn_prefix = {os.path.splitext(fname)[0] for fname in pngs}
-
-        assert len(jsons_fn_prefix - pngs_fn_prefix) == 0
-        assert len(pngs_fn_prefix - jsons_fn_prefix) == 0
-        
-        pngs = sorted(pngs)
-        jsons = sorted(jsons)
-        
-        _filenames = np.array(pngs)
-        _labelnames = np.array(jsons)
-        
-        filenames, labelnames = split_train_val(_filenames, _labelnames, n_splits=5, is_train=is_train)
+        if cfg.total:
+            _filenames = np.array(pngs)
+            _labelnames = np.array(jsons)
+            
+            filenames, labelnames = _filenames, _labelnames
+        else:
+            filenames, labelnames = split_train_val(cfg, pngs, jsons, is_train=is_train)
         
         self.filenames = filenames
         self.labelnames = labelnames
         self.is_train = is_train
-        self.transforms = get_train_transform() if self.is_train else get_valid_transform()
+        self.transforms = get_train_transform(cfg) if self.is_train else get_valid_transform(cfg)
+        self.tta_transforms = get_tta_transform() if (not self.is_train) and cfg.tta else None
     
     def __len__(self):
         return len(self.filenames)
     
     def __getitem__(self, item):
         image_name = self.filenames[item]
-        image_path = os.path.join(IMAGE_ROOT, image_name)
+        image_path = os.path.join(self.image_root, image_name)
         
         image = cv2.imread(image_path)
         image = image / 255.
         
         label_name = self.labelnames[item]
-        label_path = os.path.join(LABEL_ROOT, label_name)
+        label_path = os.path.join(self.label_root, label_name)
         
         # (H, W, NC) 모양의 label을 생성합니다.
         label_shape = tuple(image.shape[:2]) + (len(CLASSES), )
@@ -84,10 +69,20 @@ class XRayDataset(Dataset):
             
             image = result["image"]
             label = result["mask"] if self.is_train else label
+        
+        if (not self.is_train) and self.tta_transforms is not None:
+            tta_result = self.tta_transforms(image=image)
+            tta_image = tta_result["image"]
 
-        # to tenser will be done later
-        image = image.transpose(2, 0, 1)
-        label = label.transpose(2, 0, 1)
+            image = np.stack([image, tta_image], axis=0)
+            label = np.stack([label, label], axis=0)
+        
+        if self.tta_transforms is None:
+            image = image.transpose(2, 0, 1)
+            label = label.transpose(2, 0, 1)
+        else:
+            image = image.transpose(0, 3, 1, 2)
+            label = label.transpose(0, 3, 1, 2)
         
         image = torch.from_numpy(image).float()
         label = torch.from_numpy(label).float()

@@ -7,7 +7,35 @@ from src.configs.train_config import TrainConfig
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model", type=str)
+    # 경로 설정
+    parser.add_argument("--data", type=str, default=TRIAN_ROOT)
+    parser.add_argument("--saved_dir", type=str, default=SAVED_DIR)
+    parser.add_argument("--saved_name", type=str, default="none")
+    parser.add_argument("--split_file", type=str, default=SPLIT_FILE_ROOT)
+    
+    # 데이터 설정
+    parser.add_argument("--total", action="store_true")   # no valid
+    parser.add_argument("--tta", action="store_true")
+    
+    parser.add_argument("--img_size", type=int, default=2048)
+    parser.add_argument("--use_scale", action="store_true")
+    parser.add_argument("--use_rotate", action="store_true")
+    parser.add_argument("--use_flip", action="store_true")
+    parser.add_argument("--use_contrast", action="store_true")
+    
+    # 모델 설정
+    parser.add_argument("--model", type=str, default='upernet')
+
+    
+    parser.add_argument("--window_size", type=int, default=16)
+
+    parser.add_argument('--model_conf', type=str, default='src/configs/ocrnet_hr32.py', help='MMSegmentation Config for HRNet')
+    parser.add_argument("--encoder", type=str, default='resnext50_32x4d')
+
+    parser.add_argument("--loss", type=str, default='BDJ')
+    parser.add_argument("--scheduler", type=str, default="warmup")
+    parser.add_argument("--poly_power", type=float, default=0.9, help="Power for poly scheduler")
+    parser.add_argument("--optim", type=str, default="adam")
     
     parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
     
@@ -18,12 +46,44 @@ def parse_args():
     
     parser.add_argument("--use_wandb", action="store_true", help="use wandb logging")
 
+    # ===== Boundary options (ADD) =====
+    parser.add_argument("--boundary_mode", type=str, default="none", choices=["none", "dual", "basnet"], help="Boundary detection mode")
+
+    parser.add_argument("--use_refinement", action="store_true")
+    parser.add_argument("--use_transformer", action="store_true")
+
+    parser.add_argument("--no_boundary_detach", action="store_false", dest="boundary_detach", help="Do not detach boundary detection branch during training")
+    parser.set_defaults(boundary_detach=True)
+
+    parser.add_argument("--pretrained", type=str, default="imagenet", choices=["imagenet", "scratch"], help="encoder pretrained weights")
+
     return parser.parse_args()
+
 
 def build_config(args):
     return TrainConfig(
+        data_root = args.data,
+        saved_root = args.saved_dir,
+        saved_name=f"{args.model}_{args.encoder}_{args.loss}" if args.saved_name == "none" else args.saved_name,
+        split_file_root = args.split_file,
+        
+        total=args.total,
+        tta=args.tta,
+        
+        img_size=args.img_size,
+        use_scale=args.use_scale,
+        use_rotate=args.use_rotate,
+        use_flip=args.use_flip,
+        use_contrast=args.use_contrast,
+        
         model_name=args.model,
-        save_name=f"{args.model}_best.pt",
+        model_conf=args.model_conf,
+        encoder_name=args.encoder,
+        window_size=args.window_size,
+        loss_type=args.loss,
+        scheduler=args.scheduler,
+        poly_power=args.poly_power,
+        optimizer=args.optim,
 
         batch_size=args.batch_size,
         num_workers_train=NUM_WORKERS_TRAIN,
@@ -37,4 +97,11 @@ def build_config(args):
         seed=RANDOM_SEED,
         
         use_wandb=args.use_wandb,
+
+        # ===== Boundary options (ADD) =====
+        boundary_mode=args.boundary_mode,
+        use_refinement=args.use_refinement,
+        use_transformer=args.use_transformer,
+        boundary_detach=args.boundary_detach,
+        pretrained=args.pretrained,
     )

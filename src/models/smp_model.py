@@ -1,4 +1,7 @@
 import segmentation_models_pytorch as smp
+from src.models.boundary.dual_head import DualHeadBoundaryNet
+from src.models.boundary.basnet_like import BASNetLike
+from src.configs.defaults import CLASSES
 
 
 SMP_MODELS = {
@@ -17,23 +20,61 @@ SMP_MODELS = {
 }
 
 
-def build_smp_model(model_name, encoder_name="resnet50", encoder_weights="imagenet", in_channels=3, classes=29):
+def build_smp_model(cfg, encoder_weights="imagenet", in_channels=3, classes=29):
     
-    model_name = model_name.lower()
-    if model_name not in SMP_MODELS:
-        raise ValueError(f"Unknown model_name {model_name}, choose from {list(SMP_MODELS.keys())}")
+    model_name = cfg.model_name.lower()
+    
+
+    if model_name == "swin_unet":
+        from src.models.swin_unet import build_swin_unet
+        return build_swin_unet(cfg)
+      
+    elif model_name == 'hrnet':
+        from src.models.hrnet_mmseg import get_mmseg_model
+        return get_mmseg_model(cfg.model_conf, classes)
+
+    elif model_name not in SMP_MODELS:
+        raise ValueError(f"Unknown model_name {cfg.model_name}, choose from {list(SMP_MODELS.keys())}")
+    
+    # encoder_weights 결정
+
+    if cfg.pretrained == "imagenet":
+        encoder_weights = "imagenet"
+    elif cfg.pretrained == "scratch":
+        encoder_weights = None
+    else:
+        raise ValueError(f"Unknown pretrained: {cfg.pretrained}")
 
     model_cls = SMP_MODELS[model_name]
     
-    if model_name in ["segformer", "dpt", "upernet"]:
-        return model_cls(
-            in_channels=in_channels,
-            classes=classes,
+    base_model = model_cls(
+        encoder_name=cfg.encoder_name,
+        encoder_weights=encoder_weights,
+        in_channels=in_channels,
+        classes=classes,
+        activation=None, 
+        decoder_use_batchnorm=False
+    )
+
+
+    # boundary 분기
+
+    if cfg.boundary_mode == "none":
+        return base_model
+
+    if cfg.boundary_mode == "dual":
+        return DualHeadBoundaryNet(
+            base_model=base_model,
+            detach_boundary=cfg.boundary_detach,
         )
-    else:
-        return model_cls(
-            encoder_name=encoder_name,
-            encoder_weights=encoder_weights,
-            in_channels=in_channels,
-            classes=classes,
+
+    if cfg.boundary_mode == "basnet":
+        return BASNetLike(
+            base_model=base_model,
+            num_classes=len(CLASSES),
+            use_refinement=cfg.use_refinement,
+            use_transformer=cfg.use_transformer,
+            detach_boundary=cfg.boundary_detach,
         )
+
+    raise ValueError(f"Unknown boundary_mode: {cfg.boundary_mode}")
