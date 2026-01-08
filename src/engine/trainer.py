@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 import torch.nn.functional as F
 
 
-def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False, cfg=None):
+def validation(epoch, model, data_loader, criterion, thr=0.5, cfg=None):
     print(f'Start validation #{epoch:2d}')
     model.eval()
     model = model.cuda()
@@ -21,7 +21,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False, cfg=Non
         for step, (images, masks) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images, masks = images.cuda(), masks.cuda()         
             
-            if not tta:
+            if not cfg.tta:
                 if images.shape[-2:] != (2048, 2048):
                     if cfg and cfg.model_name == 'hrnet':
                          outputs = model(images, mode='tensor')
@@ -191,7 +191,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
             torch.save(model.state_dict(), output_path)
         
         if not cfg.total and (epoch + 1) % val_every == 0:
-            val_loss, dice = validation(epoch + 1, model, val_loader, criterion, tta=cfg.tta, cfg=cfg)
+            val_loss, dice = validation(epoch + 1, model, val_loader, criterion, cfg=cfg)
             
             if best_dice < dice:
                 output_path = os.path.join(cfg.saved_root, cfg.saved_name)
