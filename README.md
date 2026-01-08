@@ -119,10 +119,10 @@
 </table>
 
 **Public**  
-<img src="assets/public.png" width="600"/>
+<img src="assets/public.png" width="800"/>
 
 **Private**  
-<img src="assets/private.png" width="600"/>
+<img src="assets/private.png" width="800"/>
 
 ## Project Structure
 ```
@@ -252,6 +252,7 @@ python -u scripts/ensemble.py \
 ## Wrap-Up report
 
 [📄Wrap-Up report](assets/wrap_up_report.pdf)
+
 
 
 
