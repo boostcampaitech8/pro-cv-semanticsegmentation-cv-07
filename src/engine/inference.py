@@ -30,6 +30,10 @@ def test(model, data_loader, thr=0.5, tta=False):
                 for t in range(n_tta):
                     img = images[:, t]
                     output = model(img)
+
+                    if isinstance(output, dict):
+                        output = output["seg"]
+                        
                     outputs_tta.append(output)
 
                 outputs = torch.stack(outputs_tta, dim=1)
