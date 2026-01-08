@@ -17,7 +17,7 @@ def generate_boundary_label(mask, kernel_size=3):
 
     return (dilated - eroded).clamp(0, 1)
 
-def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
+def validation(epoch, model, data_loader, criterion, thr=0.5, cfg=None):
     print(f'Start validation #{epoch:2d}')
     model.eval()
     model = model.cuda()
@@ -30,16 +30,26 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
         for step, (images, masks) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images, masks = images.cuda(), masks.cuda()         
             
-            if not tta:
+            if not cfg.tta:
                 if images.shape[-2:] != (2048, 2048):
-                    outputs = model(images)
-                    if isinstance(outputs, dict):
-                        outputs = outputs["seg"]
+                    if cfg and cfg.model_name == 'hrnet':
+                         outputs = model(images, mode='tensor')
+                    elif cfg.boundary_mode != "none":
+                         outputs = model(images)
+                         if isinstance(outputs, dict):
+                             outputs = outputs["seg"]
+                    else:
+                         outputs = model(images)
                 else:
                     with torch.amp.autocast(device_type="cuda"):
-                        outputs = model(images)
-                        if isinstance(outputs, dict):
-                            outputs = outputs["seg"]
+                        if cfg and cfg.model_name == 'hrnet':
+                             outputs = model(images, mode='tensor')
+                        elif cfg.boundary_mode != "none":
+                            outputs = model(images)
+                            if isinstance(outputs, dict):
+                                outputs = outputs["seg"]
+                        else:
+                             outputs = model(images)
                         
             else:
                 # 원본 데이터 + TTA 데이터 형태
@@ -55,10 +65,20 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
                     img = images[:, t]
                     
                     if img.shape[-2:] != (2048, 2048):
-                        output = model(img)
+                        if cfg and cfg.model_name == 'hrnet':
+                             output = model(img, mode='tensor')
+                        else:
+                             output = model(img)
                     else:
                         with torch.amp.autocast(device_type="cuda"):
-                            output = model(img)
+                            if cfg and cfg.model_name == 'hrnet':
+                                 output = model(img, mode='tensor')
+                            else:
+                                 output = model(img)
+
+                    # TTA with HRNet (tuple output handling)
+                    if isinstance(output, (list, tuple)):
+                        output = output[-1]
 
                     outputs_tta.append(output)
                 
@@ -67,6 +87,10 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
                 outputs = torch.mean(outputs, dim=1)
                 masks = masks[:, 0]
             
+            # HRNet tuple output handling for non-TTA
+            if isinstance(outputs, (list, tuple)):
+                outputs = outputs[-1]
+
             output_h, output_w = outputs.size(-2), outputs.size(-1)
             mask_h, mask_w = masks.size(-2), masks.size(-1)
             
@@ -74,6 +98,10 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
                 outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear") 
                 
             loss = criterion(outputs, masks)
+            
+            if isinstance(loss, tuple):
+                loss, _ = loss
+                
             total_loss += loss.item()
             cnt += 1
             
@@ -123,47 +151,57 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
             optimizer.zero_grad()
             
             if images.shape[-2:] != (2048, 2048):
-                outputs = model(images)
-
-                # Boundary model
-                if isinstance(outputs, dict):
-                    pred_seg = outputs["seg"]
+                if cfg.model_name == 'hrnet':
+                    outputs = model(images, mode='tensor')
+                elif cfg.boundary_mode != "none":
+                    outputs = model(images)
+                    if isinstance(outputs, dict):
+                        pred_seg = outputs["seg"]
+                else:
+                    outputs = model(images)
+                
+                if cfg.boundary_mode != "none":
                     pred_boundary = outputs["boundary"]
-
-                    # segmentation loss
                     loss_seg = criterion(pred_seg, masks)
-
-                    # boundary GT 생성
                     boundary_gt = generate_boundary_label(masks)
-
-                    # boundary loss (binary)
                     loss_boundary = F.binary_cross_entropy_with_logits(
                         pred_boundary, boundary_gt
                     )
 
-                    # detach 옵션 반영
                     if cfg.boundary_detach:
                         loss = loss_seg + 0.05 * loss_boundary.detach()
                     else:
                         loss = loss_seg + 0.05 * loss_boundary
-
-                # Baseline model
                 else:
                     loss = criterion(outputs, masks)
+                
+                # Loss Breakdown Handling
+                if isinstance(loss, tuple):
+                    loss, loss_dict = loss
+                else:
+                    loss_dict = {}
+
                 loss.backward()
                 optimizer.step()
+                
+                if cfg.scheduler == "poly" and scheduler is not None:
+                    scheduler.step()
             else:
             # (2048, 2048)인 경우, Mixed Precision Training 적용
                 with torch.amp.autocast(device_type="cuda"):
-                    outputs = model(images)
-
-                    if isinstance(outputs, dict):
-                        pred_seg = outputs["seg"]
+                    if cfg.model_name == 'hrnet':
+                        outputs = model(images, mode='tensor')
+                    elif cfg.boundary_mode != "none":
+                        outputs = model(images)
+                        if isinstance(outputs, dict):
+                            pred_seg = outputs["seg"]
+                    else:
+                        outputs = model(images)
+                
+                    if cfg.boundary_mode != "none":
                         pred_boundary = outputs["boundary"]
-
                         loss_seg = criterion(pred_seg, masks)
                         boundary_gt = generate_boundary_label(masks)
-
                         loss_boundary = F.binary_cross_entropy_with_logits(
                             pred_boundary, boundary_gt
                         )
@@ -172,13 +210,21 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
                             loss = loss_seg + 0.05 * loss_boundary.detach()
                         else:
                             loss = loss_seg + 0.05 * loss_boundary
-
                     else:
                         loss = criterion(outputs, masks)
+                    
+                    # Loss Breakdown Handling
+                    if isinstance(loss, tuple):
+                        loss, loss_dict = loss
+                    else:
+                        loss_dict = {}
 
                 scaler.scale(loss).backward()
                 scaler.step(optimizer)
                 scaler.update()
+                
+                if cfg.scheduler == "poly" and scheduler is not None:
+                    scheduler.step()
             
             train_loss += loss.item()
             
@@ -196,7 +242,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
             torch.save(model.state_dict(), output_path)
         
         if not cfg.total and (epoch + 1) % val_every == 0:
-            val_loss, dice = validation(epoch + 1, model, val_loader, criterion, tta=cfg.tta)
+            val_loss, dice = validation(epoch + 1, model, val_loader, criterion, cfg=cfg)
             
             if best_dice < dice:
                 output_path = os.path.join(cfg.saved_root, cfg.saved_name)
@@ -220,7 +266,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
             if scheduler is not None:
                 if cfg.scheduler == "reduce":
                     scheduler.step(dice)
-                else:
+                elif cfg.scheduler != "poly":
                     scheduler.step()
         else:            
             if cfg.use_wandb:
@@ -229,7 +275,7 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
                     "lr": optimizer.param_groups[0]["lr"],
                     "epoch": epoch + 1,
                 })
-            if scheduler is not None and cfg.scheduler != "reduce":
+            if scheduler is not None and cfg.scheduler != "reduce" and cfg.scheduler != "poly":
                 scheduler.step()
         
         if patience == cfg.num_patience:

@@ -1,4 +1,8 @@
-from dataclasses import dataclass
+import yaml
+#import copy
+from dataclasses import dataclass#, field, asdict
+from typing import Any, Dict
+
 
 @dataclass
 class TrainConfig:
@@ -17,7 +21,9 @@ class TrainConfig:
     use_contrast: bool
     
     model_name: str
+    model_conf: str # for HRNet
     encoder_name: str
+    window_size:str
     loss_type: str
     scheduler: str
     optimizer: str
@@ -34,11 +40,11 @@ class TrainConfig:
     num_patience: int  
 
     use_wandb: bool
+    
+    poly_power: float = 0.9
 
-    # ===== boundary options (ADD) =====
     boundary_mode: str
     use_refinement: bool
     use_transformer: bool
     boundary_detach: bool
-    
     pretrained: str

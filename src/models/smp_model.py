@@ -22,7 +22,17 @@ SMP_MODELS = {
 def build_smp_model(cfg, encoder_weights="imagenet", in_channels=3, classes=29):
     
     model_name = cfg.model_name.lower()
-    if model_name not in SMP_MODELS:
+    
+
+    if model_name == "swin_unet":
+        from src.models.swin_unet import build_swin_unet
+        return build_swin_unet(cfg)
+      
+    elif model_name == 'hrnet':
+        from src.models.hrnet_mmseg import get_mmseg_model
+        return get_mmseg_model(cfg.model_conf, classes)
+
+    elif model_name not in SMP_MODELS:
         raise ValueError(f"Unknown model_name {cfg.model_name}, choose from {list(SMP_MODELS.keys())}")
     
     # encoder_weights 결정
