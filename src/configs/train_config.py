@@ -41,7 +41,7 @@ class TrainConfig:
 
     use_wandb: bool
     
-    poly_power: float = 0.9
+    poly_power: float
 
     boundary_mode: str
     use_refinement: bool
