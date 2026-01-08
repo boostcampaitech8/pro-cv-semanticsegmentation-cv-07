@@ -1,71 +1,78 @@
+from src.configs.run_config import parse_args, build_config
 from src.data.train_data import XRayDataset
-from src.configs.config import BATCH_SIZE, CLASSES, LR, SAVED_DIR, RANDOM_SEED, NUM_EPOCHS, VAL_EVERY
 from src.utils.set_seed import set_seed
 from src.engine.trainer import train
+from src.models.smp_model import build_smp_model
+from src.losses.loss_builder import build_loss
+from src.models.scheduler import build_scheduler
+from src.models.optimizer import get_optimizer
 import os
 import wandb
 from dotenv import load_dotenv
-import torch.nn as nn
-import torch.optim as optim
+import torch
 from torch.utils.data import DataLoader
-from torchvision import models
 
 
 def main():
-    set_seed(RANDOM_SEED)
+    args = parse_args()
+    cfg = build_config(args)
     
-    if not os.path.exists(SAVED_DIR):                                                           
-        os.makedirs(SAVED_DIR)
+    set_seed(cfg.seed)
     
-    save_file_name = "fcn_resnet50_best_model.pt"
+    if not os.path.exists(cfg.saved_root):                                                           
+        os.makedirs(cfg.saved_root)
     
-    load_dotenv()
+    if cfg.use_wandb:
+        load_dotenv()
     
-    wandb.login(key=os.getenv("WANDB_API_KEY"))
+        wandb.login(key=os.getenv("WANDB_API_KEY"))
 
-    wandb.init(
-        project=os.getenv("WANDB_PROJECT"),
-        entity=os.getenv("WANDB_ENTITY"),
-        name=save_file_name,
-        config={
-            "batch_size": BATCH_SIZE,
-            "lr": LR,
-            "random_seed": RANDOM_SEED,
-            "num_epochs": NUM_EPOCHS,
-            "val_every": VAL_EVERY,
-        },
-        settings=wandb.Settings(_disable_stats=False),
-    )
+        wandb.init(
+            project=os.getenv("WANDB_PROJECT"),
+            entity=os.getenv("WANDB_ENTITY"),
+            name=f"{cfg.saved_name}",
+            config={
+                "batch_size": cfg.batch_size,
+                "lr": cfg.lr,
+                "random_seed": cfg.seed,
+                "num_epochs": cfg.num_epochs,
+                "val_every": cfg.val_every,
+            },
+            settings=wandb.Settings(_disable_stats=False),
+        )
 
-    wandb.config.update({"monitor_memory": True})
+        wandb.config.update({"monitor_memory": True})
     
-    train_dataset = XRayDataset(is_train=True)
-    valid_dataset = XRayDataset(is_train=False)
-
+    train_dataset = XRayDataset(cfg, is_train=True)
+    if cfg.total:
+        valid_loader = None
+    else:
+        valid_dataset = XRayDataset(cfg, is_train=False)
+    
+        valid_loader = DataLoader(
+            dataset=valid_dataset, 
+            batch_size=cfg.batch_size,
+            shuffle=False,
+            num_workers=cfg.num_workers_val,
+            drop_last=False
+        )
     train_loader = DataLoader(
         dataset=train_dataset, 
-        batch_size=BATCH_SIZE,
+        batch_size=cfg.batch_size,
         shuffle=True,
-        num_workers=4,
+        num_workers=cfg.num_workers_train,
         drop_last=True,
     )
-
-    # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
-    valid_loader = DataLoader(
-        dataset=valid_dataset, 
-        batch_size=8,
-        shuffle=False,
-        num_workers=0,
-        drop_last=False
-    )
     
-    model = models.segmentation.fcn_resnet50(pretrained=True)
-    model.classifier[4] = nn.Conv2d(512, len(CLASSES), kernel_size=1)
+    model = build_smp_model(cfg)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
     
-    criterion = nn.BCEWithLogitsLoss() 
-    optimizer = optim.Adam(params=model.parameters(), lr=LR, weight_decay=1e-6)
+    criterion = build_loss(cfg)
+    optimizer = get_optimizer(cfg, model)
+    scheduler = build_scheduler(cfg, optimizer)
 
-    train(model, train_loader, valid_loader, criterion, optimizer, save_file_name=save_file_name)
+    train(model, train_loader, valid_loader, criterion, optimizer, scheduler, cfg)
 
 
 if __name__ == '__main__':
