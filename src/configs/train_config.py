@@ -1,4 +1,8 @@
-from dataclasses import dataclass
+import yaml
+#import copy
+from dataclasses import dataclass#, field, asdict
+from typing import Any, Dict
+
 
 @dataclass
 class TrainConfig:
@@ -19,6 +23,7 @@ class TrainConfig:
     model_name: str
     model_conf: str # for HRNet
     encoder_name: str
+    window_size:str
     loss_type: str
     scheduler: str
     optimizer: str

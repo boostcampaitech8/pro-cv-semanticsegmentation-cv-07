@@ -25,8 +25,13 @@ def parse_args():
     
     # 모델 설정
     parser.add_argument("--model", type=str, default='upernet')
+
+    
+    parser.add_argument("--window_size", type=int, default=16)
+
     parser.add_argument('--model_conf', type=str, default='src/configs/ocrnet_hr32.py', help='MMSegmentation Config for HRNet')
     parser.add_argument("--encoder", type=str, default='resnext50_32x4d')
+
     parser.add_argument("--loss", type=str, default='BDJ')
     parser.add_argument("--scheduler", type=str, default="warmup")
     parser.add_argument("--poly_power", type=float, default=0.9, help="Power for poly scheduler")
@@ -63,6 +68,7 @@ def build_config(args):
         model_name=args.model,
         model_conf=args.model_conf,
         encoder_name=args.encoder,
+        window_size=args.window_size,
         loss_type=args.loss,
         scheduler=args.scheduler,
         poly_power=args.poly_power,
