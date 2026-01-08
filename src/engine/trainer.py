@@ -111,7 +111,13 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
             
             if images.shape[-2:] != (2048, 2048):
                 outputs = model(images)
-                loss = criterion(outputs, masks)
+
+                if isinstance(outputs, dict):
+                    pred_seg = outputs["seg"]
+                else:
+                    pred_seg = outputs
+
+                loss = seg_criterion(pred_seg, masks)
                 loss.backward()
                 optimizer.step()
             else:

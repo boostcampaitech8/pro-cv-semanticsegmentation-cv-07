@@ -2,7 +2,7 @@ from src.configs.run_config import parse_args, build_config
 from src.data.train_data import XRayDataset
 from src.utils.set_seed import set_seed
 from src.engine.trainer import train
-from src.models.smp_model import build_smp_model
+from src.models.build_model import build_model
 from src.losses.loss_builder import build_loss
 from src.models.scheduler import build_scheduler
 from src.models.optimizer import get_optimizer
@@ -64,7 +64,7 @@ def main():
         drop_last=True,
     )
     
-    model = build_smp_model(cfg)
+    model = build_model(cfg)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     
