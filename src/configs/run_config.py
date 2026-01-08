@@ -87,4 +87,11 @@ def build_config(args):
         seed=RANDOM_SEED,
         
         use_wandb=args.use_wandb,
+
+        # ===== Boundary options (ADD) =====
+        boundary_mode=args.boundary_mode,
+        use_refinement=args.use_refinement,
+        use_transformer=args.use_transformer,
+        boundary_detach=args.boundary_detach,
+        loss_mode=args.loss_mode,
     )
