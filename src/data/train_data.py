@@ -8,9 +8,18 @@ from src.configs.defaults import IMAGE_ROOT, LABEL_ROOT, CLASSES, CLASS2IND
 from src.data.transforms import get_train_transform, get_valid_transform
 
 class XRayDataset(Dataset):
-    def __init__(self, fold, is_train=True):
+    def __init__(self, fold, input_size, is_train=True, no_aug=False):
         self.is_train = is_train
-        self.transforms = get_train_transform() if is_train else get_valid_transform()
+
+        if is_train:
+            if no_aug:
+                # NO AUGMENTATION: resize only
+                self.transforms = get_valid_transform(input_size)
+            else:
+                # NORMAL TRAIN AUG
+                self.transforms = get_train_transform(input_size)
+        else:
+            self.transforms = get_valid_transform(input_size)
 
         # 1) split json 로드
         split_path = "/data/ephemeral/home/pro-cv-semanticsegmentation-cv-07/src/datasets/splits/splits_5fold_subject.json"

@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--ckpt", type=str, required=True)
+    parser.add_argument("--input_size", type=int, required=True)
     return parser.parse_args()
 
 def main():
@@ -22,7 +23,7 @@ def main():
     model = model.cuda()
     model.eval()
 
-    test_dataset = XRayInferenceDataset()
+    test_dataset = XRayInferenceDataset(input_size=args.input_size)
 
     test_loader = DataLoader(
         dataset=test_dataset, 
@@ -32,7 +33,7 @@ def main():
         drop_last=False
     )
     
-    rles, filename_and_class = test(model, test_loader)
+    rles, filename_and_class = test(model, test_loader, out_size=(args.input_size, args.input_size))
     
     classes, filename = zip(*[x.split("_") for x in filename_and_class])
     image_name = [os.path.basename(f) for f in filename]

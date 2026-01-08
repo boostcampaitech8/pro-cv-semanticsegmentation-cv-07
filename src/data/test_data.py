@@ -8,7 +8,7 @@ from .transforms import  get_test_transform
 
 
 class XRayInferenceDataset(Dataset):
-    def __init__(self):
+    def __init__(self, input_size):
         pngs = {
             os.path.relpath(os.path.join(root, fname), start=TEST_IMAGE_ROOT)
             for root, _dirs, files in os.walk(TEST_IMAGE_ROOT)
@@ -20,7 +20,7 @@ class XRayInferenceDataset(Dataset):
         _filenames = np.array(sorted(_filenames))
         
         self.filenames = _filenames
-        self.transforms = get_test_transform()
+        self.transforms = get_test_transform(input_size)
     
     def __len__(self):
         return len(self.filenames)

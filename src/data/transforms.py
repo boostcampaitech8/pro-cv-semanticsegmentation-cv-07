@@ -5,7 +5,7 @@ import cv2
 from src.configs.defaults import INPUT_SIZE
 
 
-def get_train_transform(size=INPUT_SIZE):
+def get_train_transform(size):
     return A.Compose([
         A.Resize(size, size),
 
@@ -51,13 +51,13 @@ def get_train_transform(size=INPUT_SIZE):
     ])
 
 
-def get_valid_transform(size=INPUT_SIZE):
+def get_valid_transform(size):
     return A.Compose([
         A.Resize(size, size),
     ])
 
 
-def get_test_transform(size=INPUT_SIZE):
+def get_test_transform(size):
     return A.Compose([
         A.Resize(size, size),
     ])

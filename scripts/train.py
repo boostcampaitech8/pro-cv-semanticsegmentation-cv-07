@@ -14,18 +14,18 @@ from torch.utils.data import DataLoader
 from src.losses.combined_loss import CombinedLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmRestarts
 
-def freeze_encoder_bn(model):
-    """
-    Freeze BatchNorm layers in encoder
-    - batch=1 + high-res 안정화 목적
-    """
-    if not hasattr(model, "encoder"):
-        return
+# def freeze_encoder_bn(model):
+#     """
+#     Freeze BatchNorm layers in encoder
+#     - batch=1 + high-res 안정화 목적
+#     """
+#     if not hasattr(model, "encoder"):
+#         return
 
-    for m in model.encoder.modules():
-        if isinstance(m, nn.BatchNorm2d):
-            m.eval()
-            m.requires_grad_(False)
+#     for m in model.encoder.modules():
+#         if isinstance(m, nn.BatchNorm2d):
+#             m.eval()
+#             m.requires_grad_(False)
 
 def main():
     args = parse_args()
@@ -48,14 +48,27 @@ def main():
             entity=os.getenv("WANDB_ENTITY"),
             name=run_name,   # ✅ save_name 기반
             config={
+                # ===== model / structure =====
                 "model": cfg.model_name,
                 "encoder": cfg.encoder_name,
                 "pretrained": cfg.pretrained,
                 "boundary_mode": cfg.boundary_mode,
+                "use_refinement": cfg.use_refinement,
+                "use_transformer": cfg.use_transformer,
+
+                # ===== experiment variables =====
+                "loss_mode": cfg.loss_mode,
+                "input_size": args.input_size,
                 "batch_size": cfg.batch_size,
+                "no_aug": args.no_aug,
+                "val_every": cfg.val_every,
+
+                # ===== optimization =====
                 "lr": cfg.lr,
-                "seed": cfg.seed,
                 "num_epochs": cfg.num_epochs,
+
+                # ===== misc =====
+                "seed": cfg.seed,
             },
         )
 
@@ -63,8 +76,8 @@ def main():
     
     FOLD = args.fold  # 바꾸면서 실험
 
-    train_dataset = XRayDataset(fold=FOLD, is_train=True)
-    valid_dataset = XRayDataset(fold=FOLD, is_train=False)
+    train_dataset = XRayDataset(fold=FOLD, input_size=args.input_size, is_train=True, no_aug=args.no_aug)
+    valid_dataset = XRayDataset(fold=FOLD, input_size=args.input_size, is_train=False)
 
     print(f"[Dataset] Fold {FOLD} | Train size: {len(train_dataset)} | Val size: {len(valid_dataset)}")
 
@@ -86,8 +99,9 @@ def main():
     )
     
     model = build_model(cfg)
+    
     # ✅ [ADD] Encoder BN freeze (LAST TRY)
-    freeze_encoder_bn(model)
+    # freeze_encoder_bn(model)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
@@ -95,15 +109,18 @@ def main():
     seg_criterion = CombinedLoss(mode=cfg.loss_mode)
     boundary_criterion = CombinedLoss(mode="bce")  # ← 고정
     optimizer = optim.Adam(params=model.parameters(), lr=cfg.lr, weight_decay=1e-6)
-    scheduler = ReduceLROnPlateau(
-        optimizer,
-        mode="max",        # dice를 최대화할 거라서
-        factor=0.5,
-        patience=3,
-        threshold=1e-4,
-        min_lr=1e-6,
-        verbose=True,
-    )
+    if cfg.use_scheduler:
+        scheduler = ReduceLROnPlateau(
+            optimizer,
+            mode="max",
+            factor=0.5,
+            patience=3,
+            threshold=1e-4,
+            min_lr=1e-6,
+            verbose=True,
+        )
+    else:
+        scheduler = None
     train(model, train_loader, valid_loader, seg_criterion, boundary_criterion, optimizer, scheduler, cfg)
 
 

@@ -13,6 +13,8 @@ def parse_args():
     # ✅ 추가
     parser.add_argument("--fold", type=int, default=0)
 
+    parser.add_argument("--input_size", type=int, default=INPUT_SIZE)
+
     # 🔹 boundary switches
     parser.add_argument("--boundary_mode", type=str, default="none",
                         choices=["none", "dual", "basnet"])
@@ -35,6 +37,12 @@ def parse_args():
 
     parser.add_argument("--loss_mode", type=str, default="bce_dice", choices=["bce", "bce_dice", "bce_dice_jaccard"],)
 
+    parser.add_argument("--no_aug", action="store_true", help="disable train augmentation (use resize only)")
+
+    parser.add_argument("--no_sched", action="store_true", help="disable LR scheduler")
+
+    parser.add_argument("--exp_tag", type=str, default="")
+
     return parser.parse_args()
 
 def _flag_name(args):
@@ -55,7 +63,8 @@ def build_config(args):
             f"{args.encoder}_"
             f"{args.boundary_mode}_{flag}_"
             f"{args.loss_mode}_"
-            f"img{INPUT_SIZE}_"
+            f"img{args.input_size}_"
+            f"{args.exp_tag}_"
             f"fold{args.fold}_best.pt"
         )
         ,
@@ -80,4 +89,6 @@ def build_config(args):
         seed=RANDOM_SEED,
         
         use_wandb=args.use_wandb,
+
+        use_scheduler=not args.no_sched,
     )

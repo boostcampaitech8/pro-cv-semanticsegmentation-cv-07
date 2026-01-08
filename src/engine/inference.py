@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 
 
-def test(model, data_loader, thr=0.5):
+def test(model, data_loader, thr=0.5, out_size=None):
     model = model.cuda()
     model.eval()
 
@@ -22,7 +22,8 @@ def test(model, data_loader, thr=0.5):
             if isinstance(outputs, dict):
                 outputs = outputs["seg"]
             
-            outputs = F.interpolate(outputs, size=(2048, 2048), mode="bilinear")
+            if out_size is not None:
+                outputs = F.interpolate(outputs, size=out_size, mode="bilinear")
             outputs = torch.sigmoid(outputs)
             outputs = (outputs > thr).detach().cpu().numpy()
             

@@ -11,7 +11,7 @@ from torch.cuda.amp import autocast, GradScaler
 # ===============================
 # Boundary GT 생성 (GPU friendly)
 # ===============================
-def generate_boundary_label(mask, kernel_size=7):
+def generate_boundary_label(mask, kernel_size=3):
     """
     mask: (B, C, H, W)  (multi-class mask)
     return: (B, 1, H, W) boundary map
@@ -170,7 +170,8 @@ def train(model, data_loader, val_loader, seg_criterion, boundary_criterion, opt
              
         if (epoch + 1) % cfg.val_every == 0:
             val_loss, dice, dice_class_dict, class_dice = validation(epoch + 1, model, val_loader, seg_criterion)
-            scheduler.step(dice)   # ReduceLROnPlateau는 metric 넣어야 함
+            if scheduler is not None:
+                scheduler.step(dice)   # ReduceLROnPlateau는 metric 넣어야 함
 
             current_lr = optimizer.param_groups[0]["lr"]
             print(f"[LR] {current_lr:.2e}")
