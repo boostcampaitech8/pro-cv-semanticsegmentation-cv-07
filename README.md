@@ -175,3 +175,7 @@ python -u scripts/ensemble.py \
     --use_flip_tta \
     --output_csv $OUTPUT_NAME
 ```
+
+## Wrap-Up report
+
+[📄Wrap-Up report](assets/wrap_up_report.pdf)
