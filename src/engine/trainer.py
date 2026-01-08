@@ -32,7 +32,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, cfg=None):
             
             if not cfg.tta:
                 if images.shape[-2:] != (2048, 2048):
-                    if cfg and cfg.model_name == 'hrnet':
+                    if cfg and cfg.model_name == 'hrnet': ######
                          outputs = model(images, mode='tensor')
                     elif cfg.boundary_mode != "none":
                          outputs = model(images)
