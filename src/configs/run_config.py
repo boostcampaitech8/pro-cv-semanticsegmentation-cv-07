@@ -46,6 +46,17 @@ def parse_args():
     
     parser.add_argument("--use_wandb", action="store_true", help="use wandb logging")
 
+    # ===== Boundary options (ADD) =====
+    parser.add_argument("--boundary_mode", type=str, default="none", choices=["none", "dual", "basnet"], help="Boundary detection mode")
+
+    parser.add_argument("--use_refinement", action="store_true")
+    parser.add_argument("--use_transformer", action="store_true")
+
+    parser.add_argument("--no_boundary_detach", action="store_false", dest="boundary_detach", help="Do not detach boundary detection branch during training")
+    parser.set_defaults(boundary_detach=True)
+
+    parser.add_argument("--pretrained", type=str, default="imagenet", choices=["imagenet", "scratch"], help="encoder pretrained weights")
+
     return parser.parse_args()
 
 
@@ -86,4 +97,11 @@ def build_config(args):
         seed=RANDOM_SEED,
         
         use_wandb=args.use_wandb,
+
+        # ===== Boundary options (ADD) =====
+        boundary_mode=args.boundary_mode,
+        use_refinement=args.use_refinement,
+        use_transformer=args.use_transformer,
+        boundary_detach=args.boundary_detach,
+        pretrained=args.pretrained,
     )

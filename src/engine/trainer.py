@@ -7,6 +7,15 @@ import datetime
 from tqdm.auto import tqdm
 import torch.nn.functional as F
 
+def generate_boundary_label(mask, kernel_size=3):
+    mask = (mask > 0).float()
+    mask = mask.max(dim=1, keepdim=True)[0]
+
+    padding = kernel_size // 2
+    dilated = F.max_pool2d(mask, kernel_size, stride=1, padding=padding)
+    eroded = -F.max_pool2d(-mask, kernel_size, stride=1, padding=padding)
+
+    return (dilated - eroded).clamp(0, 1)
 
 def validation(epoch, model, data_loader, criterion, thr=0.5, cfg=None):
     print(f'Start validation #{epoch:2d}')
@@ -25,12 +34,20 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, cfg=None):
                 if images.shape[-2:] != (2048, 2048):
                     if cfg and cfg.model_name == 'hrnet':
                          outputs = model(images, mode='tensor')
+                    elif cfg.boundary_mode != "none":
+                         outputs = model(images)
+                         if isinstance(outputs, dict):
+                             outputs = outputs["seg"]
                     else:
                          outputs = model(images)
                 else:
                     with torch.amp.autocast(device_type="cuda"):
                         if cfg and cfg.model_name == 'hrnet':
                              outputs = model(images, mode='tensor')
+                        elif cfg.boundary_mode != "none":
+                            outputs = model(images)
+                            if isinstance(outputs, dict):
+                                outputs = outputs["seg"]
                         else:
                              outputs = model(images)
                         
@@ -136,10 +153,27 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
             if images.shape[-2:] != (2048, 2048):
                 if cfg.model_name == 'hrnet':
                     outputs = model(images, mode='tensor')
+                elif cfg.boundary_mode != "none":
+                    outputs = model(images)
+                    if isinstance(outputs, dict):
+                        pred_seg = outputs["seg"]
                 else:
                     outputs = model(images)
-                    
-                loss = criterion(outputs, masks)
+                
+                if cfg.boundary_mode != "none":
+                    pred_boundary = outputs["boundary"]
+                    loss_seg = criterion(pred_seg, masks)
+                    boundary_gt = generate_boundary_label(masks)
+                    loss_boundary = F.binary_cross_entropy_with_logits(
+                        pred_boundary, boundary_gt
+                    )
+
+                    if cfg.boundary_detach:
+                        loss = loss_seg + 0.05 * loss_boundary.detach()
+                    else:
+                        loss = loss_seg + 0.05 * loss_boundary
+                else:
+                    loss = criterion(outputs, masks)
                 
                 # Loss Breakdown Handling
                 if isinstance(loss, tuple):
@@ -156,11 +190,28 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
             # (2048, 2048)인 경우, Mixed Precision Training 적용
                 with torch.amp.autocast(device_type="cuda"):
                     if cfg.model_name == 'hrnet':
-                         outputs = model(images, mode='tensor')
+                        outputs = model(images, mode='tensor')
+                    elif cfg.boundary_mode != "none":
+                        outputs = model(images)
+                        if isinstance(outputs, dict):
+                            pred_seg = outputs["seg"]
                     else:
-                         outputs = model(images)
-                         
-                    loss = criterion(outputs, masks)
+                        outputs = model(images)
+                
+                    if cfg.boundary_mode != "none":
+                        pred_boundary = outputs["boundary"]
+                        loss_seg = criterion(pred_seg, masks)
+                        boundary_gt = generate_boundary_label(masks)
+                        loss_boundary = F.binary_cross_entropy_with_logits(
+                            pred_boundary, boundary_gt
+                        )
+
+                        if cfg.boundary_detach:
+                            loss = loss_seg + 0.05 * loss_boundary.detach()
+                        else:
+                            loss = loss_seg + 0.05 * loss_boundary
+                    else:
+                        loss = criterion(outputs, masks)
                     
                     # Loss Breakdown Handling
                     if isinstance(loss, tuple):

@@ -40,4 +40,11 @@ class TrainConfig:
     num_patience: int  
 
     use_wandb: bool
+    
     poly_power: float = 0.9
+
+    boundary_mode: str
+    use_refinement: bool
+    use_transformer: bool
+    boundary_detach: bool
+    pretrained: str
