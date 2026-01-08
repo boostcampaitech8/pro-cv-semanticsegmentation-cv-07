@@ -41,7 +41,7 @@ class BASNetLike(nn.Module):
 
     def forward(self, x):
         feats = self.encoder(x)
-         if isinstance(self.base_model.decoder, (smp.decoders.unetplusplus.decoder.UnetPlusPlusDecoder,)):
+        if isinstance(self.base_model.decoder, (smp.decoders.unetplusplus.decoder.UnetPlusPlusDecoder,)):
             dec = self.decoder(feats)
         else:
             dec = self.decoder(*feats)
