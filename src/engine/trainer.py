@@ -7,6 +7,15 @@ import datetime
 from tqdm.auto import tqdm
 import torch.nn.functional as F
 
+def generate_boundary_label(mask, kernel_size=3):
+    mask = (mask > 0).float()
+    mask = mask.max(dim=1, keepdim=True)[0]
+
+    padding = kernel_size // 2
+    dilated = F.max_pool2d(mask, kernel_size, stride=1, padding=padding)
+    eroded = -F.max_pool2d(-mask, kernel_size, stride=1, padding=padding)
+
+    return (dilated - eroded).clamp(0, 1)
 
 def validation(epoch, model, data_loader, criterion, thr=0.5, tta=False):
     print(f'Start validation #{epoch:2d}')
@@ -116,21 +125,56 @@ def train(model, data_loader, val_loader, criterion, optimizer, scheduler, cfg):
             if images.shape[-2:] != (2048, 2048):
                 outputs = model(images)
 
+                # Boundary model
                 if isinstance(outputs, dict):
                     pred_seg = outputs["seg"]
-                else:
-                    pred_seg = outputs
+                    pred_boundary = outputs["boundary"]
 
-                loss = criterion(pred_seg, masks)
+                    # segmentation loss
+                    loss_seg = criterion(pred_seg, masks)
+
+                    # boundary GT 생성
+                    boundary_gt = generate_boundary_label(masks)
+
+                    # boundary loss (binary)
+                    loss_boundary = F.binary_cross_entropy_with_logits(
+                        pred_boundary, boundary_gt
+                    )
+
+                    # detach 옵션 반영
+                    if cfg.boundary_detach:
+                        loss = loss_seg + 0.05 * loss_boundary.detach()
+                    else:
+                        loss = loss_seg + 0.05 * loss_boundary
+
+                # Baseline model
+                else:
+                    loss = criterion(outputs, masks)
                 loss.backward()
                 optimizer.step()
             else:
             # (2048, 2048)인 경우, Mixed Precision Training 적용
                 with torch.amp.autocast(device_type="cuda"):
                     outputs = model(images)
+
                     if isinstance(outputs, dict):
-                        outputs = outputs["seg"]
-                    loss = criterion(outputs, masks)
+                        pred_seg = outputs["seg"]
+                        pred_boundary = outputs["boundary"]
+
+                        loss_seg = criterion(pred_seg, masks)
+                        boundary_gt = generate_boundary_label(masks)
+
+                        loss_boundary = F.binary_cross_entropy_with_logits(
+                            pred_boundary, boundary_gt
+                        )
+
+                        if cfg.boundary_detach:
+                            loss = loss_seg + 0.05 * loss_boundary.detach()
+                        else:
+                            loss = loss_seg + 0.05 * loss_boundary
+
+                    else:
+                        loss = criterion(outputs, masks)
 
                 scaler.scale(loss).backward()
                 scaler.step(optimizer)
