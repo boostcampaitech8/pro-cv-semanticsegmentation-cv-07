@@ -15,7 +15,7 @@ class DualHeadBoundaryNet(nn.Module):
         self.seg_head = base_model.segmentation_head
 
         # decoder 출력 채널
-        decoder_out_ch = self.seg_head.in_channels
+        decoder_out_ch = self.decoder.out_channels[-1]
 
         # boundary head만 추가
         self.boundary_head = nn.Conv2d(
