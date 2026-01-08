@@ -58,6 +58,10 @@ def build_smp_model(cfg, encoder_weights="imagenet", in_channels=3, classes=29):
 
 
     # boundary 분기
+    # boundary_mode에 따라 base SMP model을 wrapping
+    # - none  : 순수 SMP segmentation
+    # - dual  : segmentation + boundary (auxiliary)
+    # - basnet: boundary-aware refinement
 
     if cfg.boundary_mode == "none":
         return base_model

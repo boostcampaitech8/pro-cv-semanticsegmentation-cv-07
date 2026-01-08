@@ -17,6 +17,7 @@ def test(model, data_loader, thr=0.5, tta=False):
             
             if not tta: 
                 outputs = model(images)
+                # boundary 모델은 dict를 반환하므로 inference에서는 seg만 사용
                 if isinstance(outputs, dict):
                     outputs = outputs["seg"]
             else:
@@ -30,7 +31,7 @@ def test(model, data_loader, thr=0.5, tta=False):
                 for t in range(n_tta):
                     img = images[:, t]
                     output = model(img)
-
+                    # boundary 모델은 dict를 반환하므로 inference에서는 seg만 사용
                     if isinstance(output, dict):
                         output = output["seg"]
                         

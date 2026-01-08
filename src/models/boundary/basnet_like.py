@@ -15,7 +15,10 @@ from .transformer_mediator import BoundaryMediatorTransformer
 
 class BASNetLike(nn.Module):
     """
-    Boundary-aware stream + Semantic-aware stream
+    SMP segmentation model 위에 boundary head를 추가한 구조.
+    - semantic branch: 기존 segmentation
+    - boundary branch: decoder feature 기반 경계 예측
+    - refinement: boundary를 이용해 seg logit만 선택적으로 보정
     """
 
     def __init__(self, base_model, num_classes: int, use_refinement=True, use_transformer=False, detach_boundary=True):
@@ -41,6 +44,8 @@ class BASNetLike(nn.Module):
 
     def forward(self, x):
         feats = self.encoder(x)
+        # Unet++ decoder는 feature list를 그대로 받음
+        # (일반 SMP decoder는 *feats 형태)
         if isinstance(self.base_model.decoder, (smp.decoders.unetplusplus.decoder.UnetPlusPlusDecoder,)):
             dec = self.decoder(feats)
         else:
@@ -48,8 +53,11 @@ class BASNetLike(nn.Module):
 
         seg_logits = self.seg_head(dec)
         boundary_feat = dec.detach() if self.detach_boundary else dec
+        # boundary logit은 decoder feature에서만 생성
         boundary_logits = self.boundary_head(boundary_feat)
 
+        # refinement는 segmentation logit만 수정
+        # boundary는 loss / gate 용도로만 사용
         if self.use_refinement:
             seg_logits = self.boundary_refine(seg_logits, boundary_logits)
 

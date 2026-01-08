@@ -4,7 +4,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
+"""
+Boundary 기반 refinement에서 사용하는 기본 블록들.
+- boundary confidence로 feature를 조절하거나
+- 경계 주변만 선택적으로 refinement 수행
+"""
 class ConvBNReLU(nn.Module):
     def __init__(self, in_ch, out_ch, k=3, p=1):
         super().__init__()
@@ -17,7 +21,8 @@ class ConvBNReLU(nn.Module):
 
 class BoundaryConfidenceGate(nn.Module):
     """
-    Boundary confidence로 feature를 gating
+    Boundary probability를 이용해 feature map을 soft-gating.
+    - boundary가 강한 위치에서만 feature를 강조
     """
     def __init__(self):
         super().__init__()
@@ -35,8 +40,11 @@ class BoundaryConfidenceGate(nn.Module):
 
 class EdgeAwareRefine(nn.Module):
     """
-    Boundary 주변에서만 refinement 수행
+    Boundary 근처에서만 segmentation feature를 보정.
+    - 전체 재예측 x
+    - 경계 영역만 선택적 refinement
     """
+
     def __init__(self, channels):
         super().__init__()
         self.conv = nn.Sequential(
