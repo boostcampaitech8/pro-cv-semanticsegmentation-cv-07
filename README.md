@@ -124,6 +124,74 @@
 **Private**  
 <img src="assets/private.png" width="600"/>
 
+## Project Structure
+```
+|-- README.md
+|-- assets
+|   |-- private.png
+|   |-- public.png
+|   `-- wrap_up_report.pdf
+|-- etc
+|   |-- __init__.py
+|   |-- best_threshold.ipynb
+|   |-- check_overlap_dice.ipynb
+|   |-- result_visualization.ipynb
+|   `-- visualization.py
+|-- external
+|   `-- Swin-Unet
+|-- scripts
+|   |-- __init__.py
+|   |-- ensemble.py
+|   |-- test.py
+|   `-- train.py
+`-- src
+    |-- __init__.py
+    |-- configs
+    |   |-- __init__.py
+    |   |-- defaults.py
+    |   |-- ocrnet_hr18.py
+    |   |-- ocrnet_hr32.py
+    |   |-- run_config.py
+    |   `-- train_config.py
+    |-- data
+    |   |-- __init__.py
+    |   |-- test_data.py
+    |   |-- train_data.py
+    |   |-- transforms.py
+    |   `-- utils.py
+    |-- engine
+    |   |-- __init__.py
+    |   |-- inference.py
+    |   `-- trainer.py
+    |-- losses
+    |   |-- __init__.py
+    |   |-- bce_dice.py
+    |   |-- focal_bce.py
+    |   |-- loss_builder.py
+    |   `-- wrappers.py
+    |-- metrics
+    |   |-- __init__.py
+    |   `-- dice.py
+    |-- models
+    |   |-- __init__.py
+    |   |-- boundary
+    |   |   |-- __init__.py
+    |   |   |-- basnet_like.py
+    |   |   |-- blocks.py
+    |   |   |-- decoder_factory.py
+    |   |   |-- dual_head.py
+    |   |   |-- logit_scaler.py
+    |   |   |-- refinement.py
+    |   |   `-- transformer_mediator.py
+    |   |-- hrnet_mmseg.py
+    |   |-- optimizer.py
+    |   |-- scheduler.py
+    |   |-- smp_model.py
+    |   `-- swin_unet.py
+    `-- utils
+        |-- __init__.py
+        `-- set_seed.py
+```
 
 ## 🛠 Ensemble Usage
 
@@ -179,3 +247,4 @@ python -u scripts/ensemble.py \
 ## Wrap-Up report
 
 [📄Wrap-Up report](assets/wrap_up_report.pdf)
+
